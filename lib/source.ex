@@ -1,5 +1,8 @@
 defmodule Membrane.SRT.Source do
+  @moduledoc false
   use Membrane.Source
+
+  require Membrane.Logger
 
   alias ExLibSRT.Server
 
@@ -31,7 +34,7 @@ defmodule Membrane.SRT.Source do
 
   @impl true
   def handle_info(message, _ctx, state) do
+    Membrane.Logger.warning("Received unknown message: #{inspect(message)}")
     {[], state}
   end
 end
-

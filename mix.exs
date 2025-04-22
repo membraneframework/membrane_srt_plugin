@@ -37,9 +37,8 @@ defmodule Membrane.SRT.Mixfile do
 
   defp deps do
     [
-      {:membrane_core, "~> 1.0"},
+      {:membrane_core, "~> 1.2.3"},
       {:ex_libsrt, github: "Qizot/ex_libsrt"},
-
       {:membrane_mpeg_ts_plugin, github: "kim-company/membrane_mpeg_ts_plugin"},
       {:membrane_aac_plugin, "~> 0.19.0", optional: true},
       {:membrane_h26x_plugin, "~> 0.10.0", optional: true},
