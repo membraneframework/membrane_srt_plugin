@@ -29,6 +29,10 @@ defmodule Membrane.SRT.IntegrationTest do
 
     Pipeline.execute_actions(sender, spec: sender_spec)
 
+    assert_end_of_stream(receiver, :sink)
+    Membrane.Pipeline.terminate(sender)
+    Membrane.Pipeline.terminate(receiver)
+
     assert File.read!(input) == File.read!(output)
   end
 end
