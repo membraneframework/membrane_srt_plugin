@@ -1,12 +1,12 @@
-defmodule Membrane.Template.Mixfile do
+defmodule Membrane.SRT.Mixfile do
   use Mix.Project
 
   @version "0.1.0"
-  @github_url "https://github.com/membraneframework/membrane_template_plugin"
+  @github_url "https://github.com/membraneframework-labs/membrane_srt_plugin"
 
   def project do
     [
-      app: :membrane_template_plugin,
+      app: :membrane_srt_plugin,
       version: @version,
       elixir: "~> 1.13",
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -15,11 +15,11 @@ defmodule Membrane.Template.Mixfile do
       dialyzer: dialyzer(),
 
       # hex
-      description: "Template Plugin for Membrane Framework",
+      description: "SRT Source and Sink for Membrane Framework",
       package: package(),
 
       # docs
-      name: "Membrane Template plugin",
+      name: "Membrane SRT plugin",
       source_url: @github_url,
       docs: docs(),
       homepage_url: "https://membrane.stream"
@@ -38,6 +38,13 @@ defmodule Membrane.Template.Mixfile do
   defp deps do
     [
       {:membrane_core, "~> 1.0"},
+      {:ex_libsrt, github: "Qizot/ex_libsrt"},
+
+      {:membrane_mpeg_ts_plugin, github: "kim-company/membrane_mpeg_ts_plugin"},
+      {:membrane_aac_plugin, "~> 0.19.0", optional: true},
+      {:membrane_h26x_plugin, "~> 0.10.0", optional: true},
+      {:membrane_mp4_plugin, "~> 0.35.0", optional: true},
+      {:membrane_file_plugin, "~> 0.17.0", optiona: true},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
       {:dialyxir, ">= 0.0.0", only: :dev, runtime: false},
       {:credo, ">= 0.0.0", only: :dev, runtime: false}
