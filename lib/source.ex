@@ -23,6 +23,11 @@ defmodule Membrane.SRT.Source do
   end
 
   @impl true
+  def handle_info({:srt_server_conn, _id, _stream_id}, _ctx, state) do
+    {[], state}
+  end
+
+  @impl true
   def handle_info({:srt_data, _conn_id, payload}, _ctx, state) do
     {[buffer: {:output, %Membrane.Buffer{payload: payload}}], state}
   end

@@ -44,6 +44,7 @@ defmodule Membrane.SRT.Mixfile do
       {:membrane_h26x_plugin, "~> 0.10.0", optional: true},
       {:membrane_mp4_plugin, "~> 0.35.0", optional: true},
       {:membrane_file_plugin, "~> 0.17.0", optiona: true},
+      {:membrane_realtimer_plugin, "~> 0.10.1", only: :test},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
       {:dialyxir, ">= 0.0.0", only: :dev, runtime: false},
       {:credo, ">= 0.0.0", only: :dev, runtime: false}
