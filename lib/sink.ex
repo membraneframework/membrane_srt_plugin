@@ -1,5 +1,8 @@
 defmodule Membrane.SRT.Sink do
-  @moduledoc false
+  @moduledoc """
+  Membrane Sink acting as an SRT client which sends incoming data to an SRT server.
+  The server listens on the specified IP address and port.
+  """
   use Membrane.Sink
   require Membrane.Logger
 
@@ -7,9 +10,25 @@ defmodule Membrane.SRT.Sink do
 
   def_input_pad(:input, accepted_format: Membrane.RemoteStream)
 
-  def_options port: [spec: :inet.port_number()],
-              ip: [spec: String.t(), default: "127.0.0.1"],
-              stream_id: [spec: String.t()]
+  def_options port: [
+                spec: :inet.port_number(),
+                description: """
+                The port number on which the SRT server listens.
+                """
+              ],
+              ip: [
+                spec: String.t(),
+                default: "127.0.0.1",
+                description: """
+                The IP address where the SRT server is located. Defaults to 127.0.0.1 (localhost).
+                """
+              ],
+              stream_id: [
+                spec: String.t(),
+                description: """
+                ID of the stream being sent.
+                """
+              ]
 
   @impl true
   def handle_init(_ctx, opts) do

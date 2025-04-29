@@ -24,7 +24,7 @@ defmodule Membrane.SRT.IntegrationTest do
     @impl true
     def handle_buffer(:input, buffer, _ctx, state) do
       buffer = %Membrane.Buffer{buffer | pts: Membrane.Time.milliseconds(state.i)}
-      {[buffer: {:output, buffer}], %{state | i: state.i+1}}
+      {[buffer: {:output, buffer}], %{state | i: state.i + 1}}
     end
   end
 
@@ -34,8 +34,9 @@ defmodule Membrane.SRT.IntegrationTest do
 
     output = Path.join(ctx.tmp_dir, "out.ts")
     input = "test/fixtures/bbb.ts"
+
     receiver_spec =
-      child(:source, %Membrane.SRT.Source{port: @port})
+      child(:source, %Membrane.SRT.Source{port: @port, stream_id: @stream_id})
       |> child(:sink, %Membrane.File.Sink{location: output})
 
     Pipeline.execute_actions(receiver, spec: receiver_spec)
@@ -53,7 +54,10 @@ defmodule Membrane.SRT.IntegrationTest do
     assert_end_of_stream(receiver, :sink, :input, 5000)
     Membrane.Pipeline.terminate(sender)
     Membrane.Pipeline.terminate(receiver)
-    # assert abs(File.lstat!(input).size - File.lstat!(output).size) < @tolerance_factor*File.lstat!(input).size
+
+    assert abs(File.lstat!(input).size - File.lstat!(output).size) <
+             @tolerance_factor * File.lstat!(input).size
+
     assert File.read!(input) == File.read!(output)
   end
 end

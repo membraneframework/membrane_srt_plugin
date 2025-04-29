@@ -1,14 +1,37 @@
 defmodule Membrane.SRT.Source do
-  @moduledoc false
+  @moduledoc """
+  Membrane Source acting as a SRT server.
+  It listens for connection on given port.
+  When the connection is estabilished, it start receiving stream
+  with given `stream_id`.
+  """
   use Membrane.Source
-
   require Membrane.Logger
-
   alias ExLibSRT.Server
 
   def_output_pad(:output, accepted_format: Membrane.RemoteStream, flow_control: :push)
 
-  def_options(port: [spec: :inet.port_number()], ip: [spec: String.t(), default: "0.0.0.0"])
+  def_options(
+    port: [
+      spec: :inet.port_number(),
+      description: """
+      Port on which the server starts listening.
+      """
+    ],
+    ip: [
+      spec: String.t(),
+      default: "0.0.0.0",
+      description: """
+      Address on which the server starts listening.
+      """
+    ],
+    stream_id: [
+      spec: String.t(),
+      description: """
+      ID of the stream which will be accepted by this server.
+      """
+    ]
+  )
 
   @impl true
   def handle_playing(_ctx, opts) do
@@ -17,8 +40,16 @@ defmodule Membrane.SRT.Source do
   end
 
   @impl true
-  def handle_info({:srt_server_connect_request, _address, _stream_id}, _ctx, state) do
-    :ok = Server.accept_awaiting_connect_request(state.server)
+  def handle_info({:srt_server_connect_request, _address, stream_id}, _ctx, state) do
+    if stream_id == state.stream_id do
+      :ok = Server.accept_awaiting_connect_request(state.server)
+    else
+      Membrane.Logger.warning(
+        "Received connection request for stream with ID: #{inspect(stream_id)} which is not accepted
+        by this server. Server expects stream with ID: #{inspect(stream_id)}"
+      )
+    end
+
     {[], state}
   end
 
