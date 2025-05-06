@@ -9,20 +9,24 @@ defmodule Membrane.MPEGTS.PAT do
     # HEADER
     table_id = 0x00
     section_syntax_indicator = 1
-    section_length = byte_size(program_description)+4+5 # there are 4 bytes in crc32 and 5 bytes in the
+    # there are 4 bytes in crc32 and 5 bytes in the
+    section_length = byte_size(program_description) + 4 + 5
     # header behind this field
-    transport_stream_id = 0xBEEF # We are free to choose any value
+    # We are free to choose any value
+    transport_stream_id = 0xBEEF
     version_number = 0
     current_next_indicator = 1
     # we only have one section
     section_number = 0
     last_section_number = 0
-    header = <<table_id::8, section_syntax_indicator::1, 0::1, @reserved::2, section_length::12,
-transport_stream_id::16, @reserved::2, version_number::5, current_next_indicator::1,
-    section_number::8, last_section_number::8>>
+
+    header =
+      <<table_id::8, section_syntax_indicator::1, 0::1, @reserved::2, section_length::12,
+        transport_stream_id::16, @reserved::2, version_number::5, current_next_indicator::1,
+        section_number::8, last_section_number::8>>
 
     # CRC32
-    crc32_value = :erlang.crc32(header<>program_description)
+    crc32_value = :erlang.crc32(header <> program_description)
     crc32 = <<crc32_value::32>>
     header <> program_description <> crc32
   end

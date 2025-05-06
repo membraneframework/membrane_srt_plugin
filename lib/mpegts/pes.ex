@@ -19,23 +19,27 @@ defmodule Membrane.MPEGTS.PES do
     pes_extension_flag = 0
     encoded_timestamps = encode_timestamps(pts, dts)
     pes_header_data_length = byte_size(encoded_timestamps)
+
     es_specific_header =
-      <<1::1, 0::1, pes_scrambling_control::1, pes_priority::2, data_alignment_indicator::1, copyright::1,
-        original_or_copy::1, pts_dts_flag::2, escr_flag::1, es_rate_flag::1,
-        dsm_trick_mode_flag::1, additional_copy_info_flag::1, pes_crc_flag::1, pes_extension_flag::1,
-        pes_header_data_length>> <> encoded_timestamps
+      <<1::1, 0::1, pes_scrambling_control::1, pes_priority::2, data_alignment_indicator::1,
+        copyright::1, original_or_copy::1, pts_dts_flag::2, escr_flag::1, es_rate_flag::1,
+        dsm_trick_mode_flag::1, additional_copy_info_flag::1, pes_crc_flag::1,
+        pes_extension_flag::1, pes_header_data_length>> <> encoded_timestamps
 
     # Common header
     packet_start_code_prefix = 1
     pes_packet_length = byte_size(es_specific_header) + byte_size(payload)
     stream_id = pid_to_stream_id(pid)
-    common_header = <<packet_start_code_prefix::24, stream_id::binary-size(1), pes_packet_length::16>>
+
+    common_header =
+      <<packet_start_code_prefix::24, stream_id::binary-size(1), pes_packet_length::16>>
 
     common_header <> es_specific_header <> payload
   end
 
   defp pid_to_stream_id(pid) do
-    <<1::1, 1::1, 1::1, 0::1, pid::4>> # according to table 2-22
+    # according to table 2-22
+    <<1::1, 1::1, 1::1, 0::1, pid::4>>
   end
 
   defp encode_timestamps(pts, dts) do

@@ -3,8 +3,10 @@ defmodule Membrane.MPEGTS.PMT do
 
   def serialize(program_number, audio_pid, video_pid) do
     # CONTENT
-    pcr_pid = 0x1FFF # TODO
-    program_info_length = 0 # TODO
+    # TODO
+    pcr_pid = 0x1FFF
+    # TODO
+    program_info_length = 0
     mappings = generate_mapping(:audio, audio_pid) <> generate_mapping(:video, video_pid)
 
     # HEADER
@@ -14,15 +16,17 @@ defmodule Membrane.MPEGTS.PMT do
     current_next_indicator = 1
     section_number = 0
     last_section_number = 0
-    section_length = byte_size(mappings)+4+9 # there 4 bytes for crc32 and 9 bytes in the
+    # there 4 bytes for crc32 and 9 bytes in the
+    section_length = byte_size(mappings) + 4 + 9
     # header behind this field
-    header = <<table_id::8, section_syntax_indicator::1, 0::1, @reserved::2, section_length::12,
-program_number::16, @reserved::2, version_number::5, current_next_indicator::1,
-    section_number::8, last_section_number::8, @reserved::3, pcr_pid::13, @reserved::4,
-      program_info_length::12>>
+    header =
+      <<table_id::8, section_syntax_indicator::1, 0::1, @reserved::2, section_length::12,
+        program_number::16, @reserved::2, version_number::5, current_next_indicator::1,
+        section_number::8, last_section_number::8, @reserved::3, pcr_pid::13, @reserved::4,
+        program_info_length::12>>
 
     # CRC
-    crc32_value = :erlang.crc32(header<>mappings)
+    crc32_value = :erlang.crc32(header <> mappings)
     crc32 = <<crc32_value::32>>
 
     header <> mappings <> crc32
@@ -34,7 +38,9 @@ program_number::16, @reserved::2, version_number::5, current_next_indicator::1,
     <<stream_type::8, @reserved::3, pid::13, @reserved::4, es_info_length::12>>
   end
 
-  defp get_stream_type(:audio), do: 0x0F # AAC
+  # AAC
+  defp get_stream_type(:audio), do: 0x0F
 
-  defp get_stream_type(:video), do: 0x1B # H264
+  # H264
+  defp get_stream_type(:video), do: 0x1B
 end
