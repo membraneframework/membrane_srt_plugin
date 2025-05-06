@@ -8,7 +8,7 @@ defmodule Membrane.SRT.Sink do
 
   @max_payload_size 1316
 
-  def_input_pad(:input, accepted_format: Membrane.RemoteStream)
+  def_input_pad :input, accepted_format: Membrane.RemoteStream
 
   def_options port: [
                 spec: :inet.port_number(),

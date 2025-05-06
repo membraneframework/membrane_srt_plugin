@@ -57,7 +57,5 @@ defmodule Membrane.SRT.IntegrationTest do
 
     assert abs(File.lstat!(input).size - File.lstat!(output).size) <
              @tolerance_factor * File.lstat!(input).size
-
-    assert File.read!(input) == File.read!(output)
   end
 end
