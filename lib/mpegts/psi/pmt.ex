@@ -24,7 +24,7 @@ defmodule Membrane.MPEGTS.PMT do
         program_info_length::12>>
 
     # CRC
-    crc32_value = :erlang.crc32(header <> mappings)
+    crc32_value = CRC.calculate(header<>mappings, :crc_32_mpeg_2)
     crc32 = <<crc32_value::32>>
 
     header <> mappings <> crc32

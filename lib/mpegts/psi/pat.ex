@@ -12,7 +12,7 @@ defmodule Membrane.MPEGTS.PAT do
     section_length = byte_size(program_description) + 5 + 4
     # We are free to choose any value
     transport_stream_id = 0x0001
-    version_number = 1
+    version_number = 0
     current_next_indicator = 1
     # we only have one section
     section_number = 0
@@ -24,9 +24,9 @@ defmodule Membrane.MPEGTS.PAT do
         section_number::8, last_section_number::8>>
 
     # CRC32
-    crc32_value = :erlang.crc32(header<>program_description)
+    crc32_value = CRC.calculate(header<>program_description, :crc_32_mpeg_2)
     crc32 = <<crc32_value::32>>
-    <<0::8>> <> header <> program_description <> crc32
+    header <> program_description <> crc32
   end
 
   defp generate_program_description(program_number, pmt_pid) do
