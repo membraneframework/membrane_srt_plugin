@@ -3,6 +3,8 @@ defmodule Membrane.MPEGTS.TS do
 
   def serialize(pes, pid, state, is_first_part \\ true)
 
+  def serialize(<<>>, _pid, state, _is_first_part), do: {[], state}
+
   def serialize(<<first::binary-size(184), rest::binary>>, pid, state, is_first_part) do
     tei = 0
     pusi = if is_first_part, do: 1, else: 0
@@ -21,7 +23,7 @@ defmodule Membrane.MPEGTS.TS do
       pid::13,
       tsc::2,
       afc::2,
-      cc::22
+      cc::4
     >>
 
     ts_packet = header <> first
@@ -29,8 +31,6 @@ defmodule Membrane.MPEGTS.TS do
     {rest_of_packets, state} = serialize(rest, pid, state, false)
     {[ts_packet] ++ rest_of_packets, state}
   end
-
-  def serialize(<<>>, _pid, state, is_first_part), do: {[], state}
 
   def serialize(payload, pid, state, is_first_part) do
     tei = 0
@@ -50,7 +50,7 @@ defmodule Membrane.MPEGTS.TS do
       pid::13,
       tsc::2,
       afc::2,
-      cc::22
+      cc::4
     >>
 
     case payload do
@@ -59,7 +59,7 @@ defmodule Membrane.MPEGTS.TS do
         ts_packet = header <> adaptation_field <> first
         state = update_in(state, [:cc_map, pid], &(&1 + 1))
         {rest_of_packets, state} = serialize(rest, pid, state, false)
-        {[ts_packet] ++ rest_of_packets, state}
+        {[ts_packet | rest_of_packets], state}
 
       _other ->
         how_many_stuffing_bytes = 182 - byte_size(payload)
@@ -71,20 +71,20 @@ defmodule Membrane.MPEGTS.TS do
   end
 
   def create_adaptation_field(how_many_stuffing_bytes) do
-    adoption_field_length = how_many_stuffing_bytes + 1
+    adaptation_field_length = how_many_stuffing_bytes + 1
     discontinuity_indicator = 0
     random_access_indicator = 0
     elementary_stream_priority_indicator = 0
     pcr_flag = 0
     opcr_flag = 0
-    splicing_point_flag = 0
+    slicing_point_flag = 0
     transport_private_data_flag = 0
     adaptation_field_extension_flag = 0
 
     stuffing = String.duplicate(<<255>>, how_many_stuffing_bytes)
 
-    <<adoption_field_length::size(8), discontinuity_indicator::1, random_access_indicator::1,
+    <<adaptation_field_length::size(8), discontinuity_indicator::1, random_access_indicator::1,
       elementary_stream_priority_indicator::1, pcr_flag::1, opcr_flag::1, slicing_point_flag::1,
-      transport_private_data_flag::1, adaptation_field_extension_flag::1, stuffing>>
+      transport_private_data_flag::1, adaptation_field_extension_flag::1>> <> stuffing
   end
 end
