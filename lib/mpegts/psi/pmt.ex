@@ -3,22 +3,20 @@ defmodule Membrane.MPEGTS.PMT do
 
   def serialize(program_number, audio_pid, video_pid) do
     # CONTENT
-    # TODO
     pcr_pid = 0x1FFF
-    # TODO
     program_info_length = 0
     mappings = generate_mapping(:audio, audio_pid) <> generate_mapping(:video, video_pid)
 
     # HEADER
     table_id = 0x02
-    version_number = 0
     section_syntax_indicator = 1
     current_next_indicator = 1
     section_number = 0
     last_section_number = 0
-    # there 4 bytes for crc32 and 9 bytes in the
-    section_length = byte_size(mappings) + 4 + 9
+    # There are 4 bytes for crc32 and 9 bytes in the
     # header behind this field
+    section_length = byte_size(mappings) + 4 + 9
+    version_number = 0
     header =
       <<table_id::8, section_syntax_indicator::1, 0::1, @reserved::2, section_length::12,
         program_number::16, @reserved::2, version_number::5, current_next_indicator::1,
