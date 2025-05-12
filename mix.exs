@@ -41,6 +41,7 @@ defmodule Membrane.SRT.Mixfile do
       {:ex_libsrt, github: "Qizot/ex_libsrt"},
       {:membrane_mpeg_ts_plugin, github: "kim-company/membrane_mpeg_ts_plugin"},
       {:membrane_realtimer_plugin, "~> 0.10.1", only: :test},
+      {:membrane_file_plugin, "~> 0.17.2", only: :test},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
       {:dialyxir, ">= 0.0.0", only: :dev, runtime: false},
       {:credo, ">= 0.0.0", only: :dev, runtime: false}

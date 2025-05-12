@@ -34,7 +34,9 @@ defmodule Membrane.SRT.Source do
   @impl true
   def handle_playing(_ctx, opts) do
     {:ok, server} = Server.start(opts.ip, opts.port)
-    {[stream_format: {:output, %Membrane.RemoteStream{}}], %{server: server}}
+
+    {[stream_format: {:output, %Membrane.RemoteStream{}}],
+     %{server: server, stream_id: opts.stream_id}}
   end
 
   @impl true
