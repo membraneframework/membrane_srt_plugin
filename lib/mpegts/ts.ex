@@ -54,7 +54,7 @@ defmodule Membrane.MPEGTS.TS do
     >>
 
     case payload do
-      <<first::binary-size(182), rest>> ->
+      <<first::binary-size(182), rest::binary>> ->
         adaptation_field = create_adaptation_field(0)
         ts_packet = header <> adaptation_field <> first
         state = update_in(state, [:cc_map, pid], &(&1 + 1))

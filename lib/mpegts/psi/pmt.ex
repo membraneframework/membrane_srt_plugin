@@ -5,7 +5,8 @@ defmodule Membrane.MPEGTS.PMT do
     # CONTENT
     pcr_pid = 0x1FFF
     program_info_length = 0
-    mappings = generate_mapping(:audio, audio_pid) <> generate_mapping(:video, video_pid)
+    mappings = Enum.filter([audio: audio_pid, video: video_pid], fn {_type, pid} -> pid != nil end)
+|> Enum.map_join(fn {type, pid} -> generate_mapping(type, pid) end)
 
     # HEADER
     table_id = 0x02
