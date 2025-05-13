@@ -44,20 +44,19 @@ defmodule Membrane.MPEGTS.Muxer do
     end
   end
 
-  def new(:aligned) do
+  def new() do
     ts_state = TS.new() |> TS.add_pid(@pat_pid) |> TS.add_pid(@pmt_pid)
     {pat_payload, ts_state} = setup_pat(ts_state)
 
     state = %{
       ts: ts_state,
-      tracks_pids: [],
-      mode: :aligned
+      tracks_pids: []
     }
 
     {pat_payload, state}
   end
 
-  def register_track(track_type, state) do
+  def register_track(track_type, state) when track_type in [:audio, :video] do
     new_track_pid = generate_new_track_pid()
     tracks_pids = [{track_type, new_track_pid} | state.tracks_pids]
     ts_state = TS.add_pid(state.ts, new_track_pid)
@@ -67,6 +66,21 @@ defmodule Membrane.MPEGTS.Muxer do
       |> TS.serialize_psi(@pmt_pid, ts_state)
 
     {Enum.join(pmt_packets), %{state | tracks_pids: tracks_pids, ts: ts_state}}
+  end
+
+  def put_data(payload, track_type, pts_ms, dts_ms, state) do
+    pid = state.tracks_pids[track_type]
+
+    {ts_packets, ts_state} =
+      PES.serialize(
+        payload,
+        pid,
+        ceil(pts_ms * @clock_rate / 1000),
+        ceil(dts_ms * @clock_rate / 1000)
+      )
+      |> TS.serialize_pes(pid, state.ts)
+
+    {Enum.join(ts_packets), %{state | ts: ts_state}}
   end
 
   defp generate_new_track_pid() do
@@ -80,24 +94,4 @@ defmodule Membrane.MPEGTS.Muxer do
 
     {Enum.join(pat_packets), ts_state}
   end
-
-  def put_frame(frame_payload, track_type, pts_ms, dts_ms, %{mode: :aligned} = state) do
-    pid = state.tracks_pids[track_type]
-
-    {ts_packets, ts_state} =
-      PES.serialize(
-        frame_payload,
-        pid,
-        ceil(pts_ms * 1000 / @clock_rate),
-        ceil(dts_ms * 1000 / @clock_rate)
-      )
-      |> TS.serialize_pes(pid, state.ts)
-
-    state = %{state | ts: ts_state}
-    {Enum.join(ts_packets), state}
-  end
-
-  # def put_bytestream(frame_payload, track_type, pts, %{mode: :unaligned} = state) do
-  #
-  # end
 end
