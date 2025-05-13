@@ -1,6 +1,14 @@
 defmodule Membrane.MPEGTS.TS do
   @moduledoc false
 
+  def new() do
+    %{cc_map: %{}}
+  end
+
+  def add_pid(state, pid) do
+    put_in(state, [:cc_map, pid], 0)
+  end
+
   def serialize_pes(pes, pid, state, is_first_part \\ true)
 
   def serialize_pes(<<>>, _pid, state, _is_first_part), do: {[], state}
@@ -110,9 +118,9 @@ defmodule Membrane.MPEGTS.TS do
 
     pointer_field = <<0::8>>
 
-    padding_length = 184 - byte_size(payload)-1
-    if padding_length < 0, do: raise "Too long PSI"
-    padding =  String.duplicate(<<0xFF>>, padding_length)
+    padding_length = 184 - byte_size(payload) - 1
+    if padding_length < 0, do: raise("Too long PSI")
+    padding = String.duplicate(<<0xFF>>, padding_length)
     packet = header <> pointer_field <> payload <> padding
     state = update_in(state, [:cc_map, pid], &(&1 + 1))
     {[packet], state}

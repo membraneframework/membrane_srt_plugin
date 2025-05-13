@@ -1,12 +1,11 @@
 defmodule Membrane.MPEGTS.PMT do
   @reserved 0
 
-  def serialize(program_number, audio_pid, video_pid) do
+  def serialize(program_number, version, pids) do
     # CONTENT
     pcr_pid = 0x1FFF
     program_info_length = 0
-    mappings = Enum.filter([audio: audio_pid, video: video_pid], fn {_type, pid} -> pid != nil end)
-|> Enum.map_join(fn {type, pid} -> generate_mapping(type, pid) end)
+    mappings = Enum.map_join(pids, fn {type, pid} -> generate_mapping(type, pid) end)
 
     # HEADER
     table_id = 0x02
@@ -17,15 +16,15 @@ defmodule Membrane.MPEGTS.PMT do
     # There are 4 bytes for crc32 and 9 bytes in the
     # header behind this field
     section_length = byte_size(mappings) + 4 + 9
-    version_number = 0
+
     header =
       <<table_id::8, section_syntax_indicator::1, 0::1, @reserved::2, section_length::12,
-        program_number::16, @reserved::2, version_number::5, current_next_indicator::1,
+        program_number::16, @reserved::2, version::5, current_next_indicator::1,
         section_number::8, last_section_number::8, @reserved::3, pcr_pid::13, @reserved::4,
         program_info_length::12>>
 
     # CRC
-    crc32_value = CRC.calculate(header<>mappings, :crc_32_mpeg_2)
+    crc32_value = CRC.calculate(header <> mappings, :crc_32_mpeg_2)
     crc32 = <<crc32_value::32>>
 
     header <> mappings <> crc32

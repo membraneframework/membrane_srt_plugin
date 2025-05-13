@@ -1,21 +1,103 @@
-# defmodule Membrane.MPEGTS.Muxer do
-#   alias Membrane.MPEGTS.{PES, TS}
-#
-#   def new() do
-#     %{
-#       pes: PES.new(),
-#       ts: TS.new()
-#     }
-#   end
-#
-#   def put_frame(frame, id, ts, state) do
-#     {pes_packets, pes} = PES.serialize(frame, ts, ts, state.pes)
-#
-#     {ts_packets, ts} =
-#       Enum.flat_map_reduce(pes_packets, ts, fn {pes_packet, ts} ->
-#         TS.serialize(pes_packet, ts)
-#       end)
-#
-#     {pes_packets, %{state | pes: pes}}
-#   end
-# end
+defmodule Membrane.MPEGTS.Muxer do
+  alias Membrane.MPEGTS.{PAT, PMT, PES, TS}
+
+  @pat_pid 0x0
+  @pmt_pid 0x1000
+  @program_number 0x1
+  @clock_rate 90_000
+
+  defmodule H264Parser do
+    alias Membrane.H26x.NALuSplitter
+    alias Membrane.H264.NALuParser
+    alias Membrane.H264.AUSplitter
+
+    @aud <<0x00, 0x00, 0x00, 0x01, 0x09, 0x16>>
+
+    def maybe_add_aud(au) do
+      if starts_with_aud(au), do: au, else: @aud <> au
+    end
+
+    defp starts_with_aud(@aud <> _rest), do: true
+    defp starts_with_aud(_payload), do: false
+
+    def new() do
+      %{
+        nalu_splitter: NALuSplitter.new(),
+        nalu_parser: NALuParser.new(),
+        au_splitter: AUSplitter.new()
+      }
+    end
+
+    def parse(payload, state) do
+      {nalu_payloads, nalu_splitter} = NALuSplitter.split(payload, state.nalu_splitter)
+      {nalus, nalu_parser} = NALuParser.parse_nalus(nalu_payloads, state.nalu_parser)
+
+      {aus, au_splitter} = AUSplitter.split(nalus, state.au_splitter)
+
+      {aus,
+       %{state | nalu_splitter: nalu_splitter, nalu_parser: nalu_parser, au_splitter: au_splitter}}
+    end
+
+    def flush(state) do
+      {[last_au], au_splitter} = AUSplitter.split([], true, state.au_splitter)
+      {[last_au], %{state | au_splitter: au_splitter}}
+    end
+  end
+
+  def new(:aligned) do
+    ts_state = TS.new() |> TS.add_pid(@pat_pid) |> TS.add_pid(@pmt_pid)
+    {pat_payload, ts_state} = setup_pat(ts_state)
+
+    state = %{
+      ts: ts_state,
+      tracks_pids: [],
+      mode: :aligned
+    }
+
+    {pat_payload, state}
+  end
+
+  def register_track(track_type, state) do
+    new_track_pid = generate_new_track_pid()
+    tracks_pids = [{track_type, new_track_pid} | state.tracks_pids]
+    ts_state = TS.add_pid(state.ts, new_track_pid)
+
+    {pmt_packets, ts_state} =
+      PMT.serialize(@program_number, length(tracks_pids) - 1, tracks_pids)
+      |> TS.serialize_psi(@pmt_pid, ts_state)
+
+    {Enum.join(pmt_packets), %{state | tracks_pids: tracks_pids, ts: ts_state}}
+  end
+
+  defp generate_new_track_pid() do
+    System.unique_integer(~w[monotonic positive]a)
+  end
+
+  defp setup_pat(ts_state) do
+    {pat_packets, ts_state} =
+      PAT.serialize(@program_number, @pmt_pid)
+      |> TS.serialize_psi(@pat_pid, ts_state)
+
+    {Enum.join(pat_packets), ts_state}
+  end
+
+  def put_frame(frame_payload, track_type, pts_ms, dts_ms, %{mode: :aligned} = state) do
+    pid = state.tracks_pids[track_type]
+
+    {ts_packets, ts_state} =
+      PES.serialize(
+        frame_payload,
+        pid,
+        ceil(pts_ms * 1000 / @clock_rate),
+        ceil(dts_ms * 1000 / @clock_rate)
+      )
+      |> TS.serialize_pes(pid, state.ts)
+
+    state = %{state | ts: ts_state}
+    {Enum.join(ts_packets), state}
+  end
+
+  # def put_bytestream(frame_payload, track_type, pts, %{mode: :unaligned} = state) do
+  #
+  # end
+end

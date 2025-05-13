@@ -24,7 +24,7 @@ defmodule Membrane.MPEGTS.PAT do
         section_number::8, last_section_number::8>>
 
     # CRC32
-    crc32_value = CRC.calculate(header<>program_description, :crc_32_mpeg_2)
+    crc32_value = CRC.calculate(header <> program_description, :crc_32_mpeg_2)
     crc32 = <<crc32_value::32>>
     header <> program_description <> crc32
   end
