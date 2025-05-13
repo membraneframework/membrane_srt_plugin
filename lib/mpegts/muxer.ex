@@ -1,4 +1,7 @@
 defmodule Membrane.MPEGTS.Muxer do
+  @moduledoc """
+  A module with functionalities allowing for muxing stream into the MPEG-TS container.
+  """
   alias Membrane.MPEGTS.{PAT, PMT, PES, TS}
 
   @pat_pid 0x0
@@ -7,6 +10,7 @@ defmodule Membrane.MPEGTS.Muxer do
   @clock_rate 90_000
 
   defmodule H264Parser do
+    @moduledoc false
     alias Membrane.H26x.NALuSplitter
     alias Membrane.H264.NALuParser
     alias Membrane.H264.AUSplitter
@@ -44,9 +48,16 @@ defmodule Membrane.MPEGTS.Muxer do
     end
   end
 
+  @type track :: :audio | :video
+  @type t :: %{ts: TS.t(), tracks_pids: [{track(), pos_integer()}]}
+
+  @doc """
+  Creates a new muxer instance and returns initial payload with container metadata.
+  """
+  @spec new() :: t()
   def new() do
     ts_state = TS.new() |> TS.add_pid(@pat_pid) |> TS.add_pid(@pmt_pid)
-    {pat_payload, ts_state} = setup_pat(ts_state)
+    {pat_payload, ts_state} = create_pat(ts_state)
 
     state = %{
       ts: ts_state,
@@ -56,6 +67,10 @@ defmodule Membrane.MPEGTS.Muxer do
     {pat_payload, state}
   end
 
+  @doc """
+  Adds a new track to the muxer and returns track metadata.
+  """
+  @spec register_track(track(), t()) :: {binary(), t()}
   def register_track(track_type, state) when track_type in [:audio, :video] do
     new_track_pid = generate_new_track_pid()
     tracks_pids = [{track_type, new_track_pid} | state.tracks_pids]
@@ -68,15 +83,27 @@ defmodule Membrane.MPEGTS.Muxer do
     {Enum.join(pmt_packets), %{state | tracks_pids: tracks_pids, ts: ts_state}}
   end
 
-  def put_data(payload, track_type, pts_ms, dts_ms, state) do
+  @doc """
+  Adds a frame to a given track and returns next part of the container payload.
+  """
+  @spec put_frame(binary(), track(), non_neg_integer(), non_neg_integer(), t()) :: {binary(), t()}
+  def put_frame(frame, track_type, pts_ms, dts_ms, state) do
+    frame = preprocess_frame(frame, track_type)
     pid = state.tracks_pids[track_type]
+
+    {pts, dts} =
+      if pts_ms != nil and dts_ms != nil do
+        {ceil(pts_ms * @clock_rate / 1000), ceil(dts_ms * @clock_rate / 1000)}
+      else
+        {nil, nil}
+      end
 
     {ts_packets, ts_state} =
       PES.serialize(
-        payload,
+        frame,
         pid,
-        ceil(pts_ms * @clock_rate / 1000),
-        ceil(dts_ms * @clock_rate / 1000)
+        pts,
+        dts
       )
       |> TS.serialize_pes(pid, state.ts)
 
@@ -87,11 +114,19 @@ defmodule Membrane.MPEGTS.Muxer do
     System.unique_integer(~w[monotonic positive]a)
   end
 
-  defp setup_pat(ts_state) do
+  defp create_pat(ts_state) do
     {pat_packets, ts_state} =
       PAT.serialize(@program_number, @pmt_pid)
       |> TS.serialize_psi(@pat_pid, ts_state)
 
     {Enum.join(pat_packets), ts_state}
+  end
+
+  def preprocess_frame(frame, :video) do
+    H264Parser.maybe_add_aud(frame)
+  end
+
+  def preprocess_frame(frame, _other) do
+    frame
   end
 end

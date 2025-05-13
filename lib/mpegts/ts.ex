@@ -1,6 +1,8 @@
 defmodule Membrane.MPEGTS.TS do
   @moduledoc false
 
+  @type t :: %{cc_map: %{non_neg_integer() => non_neg_integer()}}
+
   def new() do
     %{cc_map: %{}}
   end

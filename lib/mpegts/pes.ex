@@ -9,8 +9,7 @@ defmodule Membrane.MPEGTS.PES do
     data_alignment_indicator = 0
     copyright = 0
     original_or_copy = 0
-    # both PTS and DTS are present
-    pts_dts_flag = 0b11
+    pts_dts_flag = if pts != nil and dts != nil, do: 0b11, else: 0b00
     escr_flag = 0
     es_rate_flag = 0
     dsm_trick_mode_flag = 0
@@ -40,6 +39,10 @@ defmodule Membrane.MPEGTS.PES do
   defp pid_to_stream_id(pid) do
     # according to table 2-22
     <<1::1, 1::1, 1::1, 0::1, pid::4>>
+  end
+
+  defp encode_timestamps(pts, dts) when pts == nil or dts == nil do
+    <<>>
   end
 
   defp encode_timestamps(pts, dts) do
