@@ -20,20 +20,21 @@ defmodule Membrane.MPEGTS.Muxer do
     def parse(payload, state) do
       payload = state.acc <> payload
       state = %{state | acc: <<>>}
-      parsing_state = %{next_frame_length: nil, header_crc_absence: nil, frame_payload: <<>>}
-      result = read_header({payload, parsing_state}) |> read_crc() |> read_frame()
 
-      case result do
-        {rest, parsing_state} ->
-          {frames, state} = parse(rest, state)
-          {[parsing_state.frame_payload | frames], state}
-
+      read_header(payload)
+      |> read_crc()
+      |> read_frame()
+      |> case do
         :error ->
           {[], %{state | acc: payload}}
+
+        {frame, rest} ->
+          {frames, state} = parse(rest, state)
+          {[frame | frames], state}
       end
     end
 
-    defp read_header({<<header::binary-size(@header_size), rest::binary>>, state}) do
+    defp read_header(<<header::binary-size(@header_size), rest::binary>>) do
       case header do
         <<0xFFF::12, _mpeg_version::1, _layer::2, crc_absence::1, _profile::2, _frequency::4,
           _priv::1, _channel_config::3, _originality::1, _home::1, _copyright_id_bit::1,
@@ -42,49 +43,47 @@ defmodule Membrane.MPEGTS.Muxer do
             Logger.warning("Unsupported `aac_frame_cnt` value of: #{inspect(aac_frame_cnt)}")
           end
 
-          {rest,
-           %{
-             state
-             | frame_payload: header,
-               next_frame_length: frame_length,
-               header_crc_absence: crc_absence
-           }}
+          %{
+            left_to_parse: rest,
+            frame_payload: header,
+            next_frame_length: frame_length,
+            header_crc_absence: crc_absence
+          }
 
         _other ->
           :error
       end
     end
 
-    defp read_header(_other) do
+    defp read_header(_other), do: :error
+
+    defp read_crc(
+           %{left_to_parse: <<crc::binary-size(2), rest::binary>>, header_crc_absence: 0} =
+             parsing_state
+         ) do
+      %{parsing_state | left_to_parse: rest, frame_payload: parsing_state.frame_payload <> crc}
+    end
+
+    defp read_crc(%{header_crc_absence: 1} = parsing_state) do
+      parsing_state
+    end
+
+    defp read_crc(:error), do: :error
+
+    defp read_frame(:error) do
       :error
     end
 
-    defp read_crc({<<crc::binary-size(2), rest::binary>>, %{header_crc_absence: 0} = state}) do
-      {rest, %{state | frame_payload: state.frame_payload <> crc}}
-    end
+    defp read_frame(parsing_state) do
+      frame_length = parsing_state.next_frame_length - @header_size
 
-    defp read_crc({binary, %{header_crc_absence: 1} = state}) do
-      {binary, state}
-    end
-
-    defp read_crc(_other) do
-      :error
-    end
-
-    defp read_frame({binary, state}) do
-      frame_length = state.next_frame_length - @header_size
-
-      case binary do
+      case parsing_state.left_to_parse do
         <<frame::binary-size(frame_length), rest::binary>> ->
-          {rest, %{state | frame_payload: state.frame_payload <> frame}}
+          {parsing_state.frame_payload <> frame, rest}
 
         _other ->
           :error
       end
-    end
-
-    defp read_frame(_other) do
-      :error
     end
   end
 
