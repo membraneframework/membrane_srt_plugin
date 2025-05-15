@@ -1,3 +1,8 @@
+Mix.install([
+  {:membrane_srt_plugin, path: "./"},
+  :membrane_file_plugin
+])
+
 defmodule SendingPipeline do
   use Membrane.Pipeline
 
@@ -6,7 +11,7 @@ defmodule SendingPipeline do
     spec =
       child(%Membrane.File.Source{location: opts[:input], chunk_size: 100})
       |> child(:srt_sink, %Membrane.SRT.Sink{
-        address: opts[:address],
+        ip: opts[:ip],
         port: opts[:port],
         stream_id: opts[:stream_id]
       })
@@ -27,7 +32,7 @@ end
 
 {:ok, sending_supervisor, _pipeline} =
   Membrane.Pipeline.start_link(SendingPipeline,
-    address: "127.0.0.1",
+    ip: "127.0.0.1",
     port: 1234,
     stream_id: "some_stream_id",
     input: "test/fixtures/bbb.ts"

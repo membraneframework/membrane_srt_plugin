@@ -9,34 +9,34 @@ defmodule Membrane.SRT.Source do
   require Membrane.Logger
   alias ExLibSRT.Server
 
-  def_output_pad(:output, accepted_format: Membrane.RemoteStream, flow_control: :push)
+  def_output_pad :output, accepted_format: Membrane.RemoteStream, flow_control: :push
 
-  def_options(
-    port: [
-      spec: :inet.port_number(),
-      description: """
-      Port on which the server starts listening.
-      """
-    ],
-    ip: [
-      spec: String.t(),
-      default: "0.0.0.0",
-      description: """
-      Address on which the server starts listening.
-      """
-    ],
-    stream_id: [
-      spec: String.t(),
-      description: """
-      ID of the stream which will be accepted by this server.
-      """
-    ]
-  )
+  def_options port: [
+                spec: :inet.port_number(),
+                description: """
+                Port on which the server starts listening.
+                """
+              ],
+              ip: [
+                spec: String.t(),
+                default: "0.0.0.0",
+                description: """
+                Address on which the server starts listening.
+                """
+              ],
+              stream_id: [
+                spec: String.t(),
+                description: """
+                ID of the stream which will be accepted by this server.
+                """
+              ]
 
   @impl true
   def handle_playing(_ctx, opts) do
     {:ok, server} = Server.start(opts.ip, opts.port)
-    {[stream_format: {:output, %Membrane.RemoteStream{}}], %{server: server}}
+
+    {[stream_format: {:output, %Membrane.RemoteStream{}}],
+     %{server: server, stream_id: opts.stream_id}}
   end
 
   @impl true

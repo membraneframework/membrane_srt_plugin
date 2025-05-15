@@ -8,7 +8,6 @@ defmodule Membrane.SRT.IntegrationTest do
   @ip "127.0.0.1"
   @port 12_000
   @stream_id "some_stream_id"
-  @tolerance_factor 0.1
 
   defmodule TimestampsGenerator do
     use Membrane.Filter
@@ -54,9 +53,6 @@ defmodule Membrane.SRT.IntegrationTest do
     assert_end_of_stream(receiver, :sink, :input, 5000)
     Membrane.Pipeline.terminate(sender)
     Membrane.Pipeline.terminate(receiver)
-
-    assert abs(File.lstat!(input).size - File.lstat!(output).size) <
-             @tolerance_factor * File.lstat!(input).size
 
     assert File.read!(input) == File.read!(output)
   end

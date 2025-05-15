@@ -23,14 +23,14 @@ end
 
 First start the receiving pipeline:
 ```
-mix run examples/receiver.exs
+elixir examples/receiver.exs
 ```
 The receiver will be waiting for the SRT connection on port 1234 for all the available network interfaces.
 When the SRT client connects, the content of stream sent via SRT will be demuxed and saved to MP4 file.
 
 Then start another shell and run the sending pipeline:
 ```
-mix run examples/sender.exs
+elixir examples/sender.exs
 ```
 
 The sender will send a fixture content of MPEG-TS file via SRT on `127.0.0.1:1234` with stream id:
