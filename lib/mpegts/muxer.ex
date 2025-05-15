@@ -3,11 +3,90 @@ defmodule Membrane.MPEGTS.Muxer do
   A module with functionalities allowing for muxing stream into the MPEG-TS container.
   """
   alias Membrane.MPEGTS.{PAT, PMT, PES, TS}
+  require Logger
 
   @pat_pid 0x0
   @pmt_pid 0x1000
   @program_number 0x1
   @clock_rate 90_000
+
+  defmodule AACParser do
+    @header_size 7
+
+    def new() do
+      %{acc: <<>>}
+    end
+
+    def parse(payload, state) do
+      payload = state.acc <> payload
+      state = %{state | acc: <<>>}
+      parsing_state = %{next_frame_length: nil, header_crc_absence: nil, frame_payload: <<>>}
+      result = read_header({payload, parsing_state}) |> read_crc() |> read_frame()
+
+      case result do
+        {rest, parsing_state} ->
+          {frames, state} = parse(rest, state)
+          {[parsing_state.frame_payload | frames], state}
+
+        :error ->
+          {[], %{state | acc: payload}}
+      end
+    end
+
+    defp read_header({<<header::binary-size(@header_size), rest::binary>>, state}) do
+      case header do
+        <<0xFFF::12, _mpeg_version::1, _layer::2, crc_absence::1, _profile::2, _frequency::4,
+          _priv::1, _channel_config::3, _originality::1, _home::1, _copyright_id_bit::1,
+          _copyright_id_start::1, frame_length::13, _buffer_fullness::11, aac_frame_cnt::2>> ->
+          if aac_frame_cnt != 0 do
+            Logger.warning("Unsupported `aac_frame_cnt` value of: #{inspect(aac_frame_cnt)}")
+          end
+
+          {rest,
+           %{
+             state
+             | frame_payload: header,
+               next_frame_length: frame_length,
+               header_crc_absence: crc_absence
+           }}
+
+        _other ->
+          :error
+      end
+    end
+
+    defp read_header(_other) do
+      :error
+    end
+
+    defp read_crc({<<crc::binary-size(2), rest::binary>>, %{header_crc_absence: 0} = state}) do
+      {rest, %{state | frame_payload: state.frame_payload <> crc}}
+    end
+
+    defp read_crc({binary, %{header_crc_absence: 1} = state}) do
+      {binary, state}
+    end
+
+    defp read_crc(_other) do
+      :error
+    end
+
+    defp read_frame({binary, state}) do
+      frame_length = state.next_frame_length - @header_size
+
+      case binary do
+        <<frame::binary-size(frame_length), rest::binary>> ->
+          {rest, %{state | frame_payload: state.frame_payload <> frame}}
+
+        _other ->
+          :error
+      end
+    end
+
+    defp read_frame(_other) do
+      :error
+    end
+  end
 
   defmodule H264Parser do
     @moduledoc false
