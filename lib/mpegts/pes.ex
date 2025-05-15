@@ -1,6 +1,16 @@
 defmodule Membrane.MPEGTS.PES do
   @moduledoc false
 
+  @doc """
+  Serializes Packetized Elementry Stream.
+
+  Packetized elementry stream needs to be either:
+  * AAC frame for audio stream
+  * H.264 access unit delimited with Access Unit Delimiter NAL unit for video stream
+
+  The provided timestamps need to be represented with 90kHz clock rate.
+  """
+  @spec serialize(binary(), pos_integer(), non_neg_integer(), non_neg_integer()) :: binary()
   def serialize(payload, pid, pts, dts) do
     # Elementary stream specific header
     pes_scrambling_control = 0

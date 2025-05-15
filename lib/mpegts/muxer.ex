@@ -139,7 +139,8 @@ defmodule Membrane.MPEGTS.Muxer do
 
     state = %{
       ts: ts_state,
-      tracks_pids: []
+      tracks_pids: [],
+      next_pid: 0
     }
 
     {pat_payload, state}
@@ -150,7 +151,7 @@ defmodule Membrane.MPEGTS.Muxer do
   """
   @spec register_track(track(), t()) :: {binary(), t()}
   def register_track(track_type, state) when track_type in [:audio, :video] do
-    new_track_pid = generate_new_track_pid()
+    {new_track_pid, state} = generate_new_track_pid(state)
     tracks_pids = [{track_type, new_track_pid} | state.tracks_pids]
     ts_state = TS.add_pid(state.ts, new_track_pid)
 
@@ -188,8 +189,8 @@ defmodule Membrane.MPEGTS.Muxer do
     {Enum.join(ts_packets), %{state | ts: ts_state}}
   end
 
-  defp generate_new_track_pid() do
-    System.unique_integer(~w[monotonic positive]a)
+  defp generate_new_track_pid(state) do
+    {state.next_pid, Map.update(state, :next_pid, 0, &(&1 + 1))}
   end
 
   defp create_pat(ts_state) do

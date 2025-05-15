@@ -6,10 +6,9 @@ defmodule Membrane.SRT.MuxerTest do
   alias Membrane.H264.AUSplitter
   alias Membrane.MPEGTS.Muxer
 
-  @tag :sometag
   test "if the MPEG TS muxes H264 stream" do
     input_path = "test/fixtures/bbb.h264"
-    reference_path = "test/fixtures/reference.ts"
+    reference_path = "test/fixtures/reference_only_video.ts"
 
     video_frames = get_video_frames(input_path, 30)
     {payload1, state} = Muxer.new()
@@ -25,7 +24,6 @@ defmodule Membrane.SRT.MuxerTest do
     assert payload == File.read!(reference_path)
   end
 
-  @tag :sometag
   test "if the MPEG TS muxes H264 and AAC streams" do
     input_audio_path = "test/fixtures/bbb.aac"
     input_video_path = "test/fixtures/bbb.h264"
