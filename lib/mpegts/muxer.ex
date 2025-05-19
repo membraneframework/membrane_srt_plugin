@@ -11,6 +11,7 @@ defmodule Membrane.MPEGTS.Muxer do
   @clock_rate 90_000
 
   defmodule AACParser do
+    @moduledoc false
     @header_size 7
 
     def new() do
@@ -89,6 +90,7 @@ defmodule Membrane.MPEGTS.Muxer do
 
   defmodule H264Parser do
     @moduledoc false
+
     alias Membrane.H26x.NALuSplitter
     alias Membrane.H264.NALuParser
     alias Membrane.H264.AUSplitter
@@ -98,9 +100,6 @@ defmodule Membrane.MPEGTS.Muxer do
     def maybe_add_aud(au) do
       if starts_with_aud(au), do: au, else: @aud <> au
     end
-
-    defp starts_with_aud(@aud <> _rest), do: true
-    defp starts_with_aud(_payload), do: false
 
     def new() do
       %{
@@ -121,9 +120,17 @@ defmodule Membrane.MPEGTS.Muxer do
     end
 
     def flush(state) do
-      {[last_au], au_splitter} = AUSplitter.split([], true, state.au_splitter)
-      {[last_au], %{state | au_splitter: au_splitter}}
+      {nalu_payloads, nalu_splitter} = NALuSplitter.split(<<>>, true, state.nalu_splitter)
+      {nalus, nalu_parser} = NALuParser.parse_nalus(nalu_payloads, state.nalu_parser)
+
+      {to_return, au_splitter} = AUSplitter.split(nalus, true, state.au_splitter)
+
+      {to_return,
+       %{state | nalu_splitter: nalu_splitter, nalu_parser: nalu_parser, au_splitter: au_splitter}}
     end
+
+    defp starts_with_aud(@aud <> _rest), do: true
+    defp starts_with_aud(_payload), do: false
   end
 
   @type track :: :audio | :video
@@ -201,11 +208,40 @@ defmodule Membrane.MPEGTS.Muxer do
     {Enum.join(pat_packets), ts_state}
   end
 
-  def preprocess_frame(frame, :video) do
+  defp preprocess_frame(frame, :video) do
+    {frames, parser} = H264Parser.parse(frame, H264Parser.new())
+    {rest_of_frames, _parser} = H264Parser.flush(parser)
+    frames = frames ++ rest_of_frames
+
+    case frames do
+      [_frame] ->
+        :ok
+
+      frames ->
+        Logger.warning("""
+        You provided an H264 payload that consists of #{length(frames)} access
+        units. `#{inspect(__MODULE__)}.put_frame/5` should be called with a payload of a single frame.
+        """)
+    end
+
     H264Parser.maybe_add_aud(frame)
   end
 
-  def preprocess_frame(frame, _other) do
+  defp preprocess_frame(frame, :audio) do
+    parser = AACParser.new()
+    {frames, _parser} = AACParser.parse(frame, parser)
+
+    case frames do
+      [_frame] ->
+        :ok
+
+      frames ->
+        Logger.warning("""
+        You provided an AAC payload that consists of #{length(frames)} frames.
+          `#{inspect(__MODULE__)}.put_frame/5` should be called with a payload of a single frame.
+        """)
+    end
+
     frame
   end
 end
