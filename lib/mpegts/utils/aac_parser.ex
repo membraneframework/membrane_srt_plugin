@@ -7,11 +7,18 @@ defmodule Membrane.MPEGTS.Utils.AACParser do
 
   @type t() :: %{acc: binary()}
 
+  @doc """
+  Returns a new instance of the AAC parser.
+  """
   @spec new() :: t()
   def new() do
     %{acc: <<>>}
   end
 
+  @doc """
+  Parses an incoming AAC stream and returns
+  a list of AAC frames and the updated parser state.
+  """
   @spec parse(binary(), t()) :: {[binary()], t()}
   def parse(payload, state) do
     payload = state.acc <> payload
