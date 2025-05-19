@@ -37,8 +37,8 @@ defmodule Membrane.MPEGTS.Utils.H264Parser do
   def parse(payload, state) do
     {nalu_payloads, nalu_splitter} = NALuSplitter.split(payload, state.nalu_splitter)
     {nalus, nalu_parser} = NALuParser.parse_nalus(nalu_payloads, state.nalu_parser)
-
     {aus, au_splitter} = AUSplitter.split(nalus, state.au_splitter)
+    aus = join_nalus_in_aus(aus)
 
     {aus,
      %{state | nalu_splitter: nalu_splitter, nalu_parser: nalu_parser, au_splitter: au_splitter}}
@@ -51,10 +51,10 @@ defmodule Membrane.MPEGTS.Utils.H264Parser do
   def flush(state) do
     {nalu_payloads, nalu_splitter} = NALuSplitter.split(<<>>, true, state.nalu_splitter)
     {nalus, nalu_parser} = NALuParser.parse_nalus(nalu_payloads, state.nalu_parser)
+    {aus, au_splitter} = AUSplitter.split(nalus, true, state.au_splitter)
+    aus = join_nalus_in_aus(aus)
 
-    {to_return, au_splitter} = AUSplitter.split(nalus, true, state.au_splitter)
-
-    {to_return,
+    {aus,
      %{state | nalu_splitter: nalu_splitter, nalu_parser: nalu_parser, au_splitter: au_splitter}}
   end
 
@@ -72,4 +72,9 @@ defmodule Membrane.MPEGTS.Utils.H264Parser do
 
   defp starts_with_aud(@aud <> _rest), do: true
   defp starts_with_aud(_payload), do: false
+
+  defp join_nalus_in_aus(aus) do
+    annexb_prefix = <<0, 0, 0, 1>>
+    Enum.map(aus, fn au -> Enum.map_join(au, &(annexb_prefix <> &1.payload)) end)
+  end
 end

@@ -1,9 +1,6 @@
 defmodule Membrane.SRT.MuxerTest do
   @moduledoc false
   use ExUnit.Case, async: true
-  alias Membrane.H26x.NALuSplitter
-  alias Membrane.H264.NALuParser
-  alias Membrane.H264.AUSplitter
   alias Membrane.MPEGTS.Muxer
   alias Membrane.MPEGTS.Utils.{AACParser, H264Parser}
 
@@ -62,15 +59,9 @@ defmodule Membrane.SRT.MuxerTest do
 
   defp get_video_frames(input_path, fps) do
     input = File.read!(input_path)
-    {nalu_payloads, _spliter} = NALuSplitter.split(input, NALuSplitter.new())
-    {nalus, _parser} = NALuParser.parse_nalus(nalu_payloads, NALuParser.new())
-
-    {aus, au_splitter} = AUSplitter.split(nalus, AUSplitter.new())
-    {[last_au], _au_splitter} = AUSplitter.split([], true, au_splitter)
-
-    aus = aus ++ [last_au]
-    annexb_prefix = <<0, 0, 0, 1>>
-    aus = Enum.map(aus, fn au -> Enum.map_join(au, &(annexb_prefix <> &1.payload)) end)
+    {aus, parser} = H264Parser.parse(input, H264Parser.new())
+    {final_aus, _parser} = H264Parser.flush(parser)
+    aus = aus ++ final_aus
 
     Enum.with_index(aus) |> Enum.map(fn {au, i} -> {i * 1000 / fps, :video, au} end)
   end
