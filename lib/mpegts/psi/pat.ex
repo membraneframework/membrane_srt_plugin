@@ -1,4 +1,11 @@
 defmodule Membrane.MPEGTS.PAT do
+  @moduledoc false
+
+  @doc """
+  Returns serialized Program Association Table pointin to a single program number
+  which description is provided in a Program Map Table with given PID.
+  """
+  @spec serialize(non_neg_integer(), non_neg_integer()) :: binary()
   def serialize(program_number, pmt_pid) do
     # CONTENT
     # we assume that we have only a single program
