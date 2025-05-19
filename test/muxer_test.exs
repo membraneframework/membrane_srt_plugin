@@ -5,6 +5,7 @@ defmodule Membrane.SRT.MuxerTest do
   alias Membrane.H264.NALuParser
   alias Membrane.H264.AUSplitter
   alias Membrane.MPEGTS.Muxer
+  alias Membrane.MPEGTS.Utils.{AACParser, H264Parser}
 
   test "if the MPEG TS muxes H264 stream" do
     input_path = "test/fixtures/bbb.h264"
@@ -51,7 +52,7 @@ defmodule Membrane.SRT.MuxerTest do
 
   defp get_audio_frames(input_path, samples_per_frame, sampling_frequency) do
     input = File.read!(input_path)
-    {aac_frames, _aac_parser} = Muxer.AACParser.parse(input, Muxer.AACParser.new())
+    {aac_frames, _aac_parser} = AACParser.parse(input, AACParser.new())
 
     Enum.with_index(aac_frames)
     |> Enum.map(fn {aac_frame, i} ->
