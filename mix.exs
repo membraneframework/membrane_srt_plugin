@@ -39,7 +39,7 @@ defmodule Membrane.SRT.Mixfile do
     [
       {:membrane_core, "~> 1.2.3"},
       {:ex_libsrt,
-       github: "membraneframework-labs/ex_libsrt", branch: "varsill/sleep_before_closing_socket"},
+       github: "membraneframework-labs/ex_libsrt", branch: "varsill/use_precompiled_srt"},
       {:membrane_mpeg_ts_plugin, github: "kim-company/membrane_mpeg_ts_plugin"},
       {:crc, "~> 0.10"},
       {:membrane_aac_plugin, "~> 0.19.0", optional: true},
