@@ -41,6 +41,7 @@ defmodule Membrane.SRT.Mixfile do
       {:ex_libsrt,
        github: "membraneframework-labs/ex_libsrt", ref: "08bfc4aabd6cd258853673cbad43a600189c2c43"},
       {:membrane_mpeg_ts_plugin, github: "kim-company/membrane_mpeg_ts_plugin"},
+      {:membrane_timestamp_queue, "~> 0.2.2"},
       {:crc, "~> 0.10"},
       {:membrane_aac_plugin, "~> 0.19.0", optional: true},
       {:membrane_h26x_plugin, "~> 0.10.0", optional: true},
