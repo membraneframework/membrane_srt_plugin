@@ -27,42 +27,32 @@ defmodule Membrane.MPEGTS.TS do
   @doc """
   Serializes Packetized Elementry Stream.
   """
-  @spec serialize_pes(binary(), non_neg_integer(), t()) :: {[binary()], t()}
-  def serialize_pes(pes, pid, state, is_first_part \\ true)
+  @spec serialize_pes(binary(), non_neg_integer(), t(), boolean(), boolean()) :: {[binary()], t()}
+  def serialize_pes(pes, pid, state, is_keyframe, is_first_part \\ true)
 
-  def serialize_pes(<<>>, _pid, state, _is_first_part), do: {[], state}
-
-  def serialize_pes(
-        <<first::binary-size(@max_payload_length), rest::binary>>,
-        pid,
-        state,
-        is_first_part
-      ) do
-    header = create_header(pid, is_first_part, :only_payload, state)
-    ts_packet = header <> first
-    state = update_in(state, [:continuity_counters_map, pid], &(&1 + 1))
-    {rest_of_packets, state} = serialize_pes(rest, pid, state, false)
-    {[ts_packet | rest_of_packets], state}
-  end
+  def serialize_pes(<<>>, _pid, state, _is_keyframe, _is_first_part), do: {[], state}
 
   def serialize_pes(
         <<first::binary-size(@max_payload_length_with_adaptation), rest::binary>>,
         pid,
         state,
+        is_keyframe,
         is_first_part
       ) do
     header = create_header(pid, is_first_part, :payload_and_adaptation, state)
-    adaptation_field = create_adaptation_field(0)
+    random_access_indicator = if is_keyframe and is_first_part, do: 1, else: 0
+    adaptation_field = create_adaptation_field(0, random_access_indicator)
     ts_packet = header <> adaptation_field <> first
     state = update_in(state, [:continuity_counters_map, pid], &(&1 + 1))
-    {rest_of_packets, state} = serialize_pes(rest, pid, state, false)
+    {rest_of_packets, state} = serialize_pes(rest, pid, state, is_keyframe, false)
     {[ts_packet | rest_of_packets], state}
   end
 
-  def serialize_pes(payload, pid, state, is_first_part) do
+  def serialize_pes(payload, pid, state, is_keyframe, is_first_part) do
     header = create_header(pid, is_first_part, :payload_and_adaptation, state)
     how_many_stuffing_bytes = @max_payload_length_with_adaptation - byte_size(payload)
-    adaptation_field = create_adaptation_field(how_many_stuffing_bytes)
+    random_access_indicator = if is_keyframe and is_first_part, do: 1, else: 0
+    adaptation_field = create_adaptation_field(how_many_stuffing_bytes, random_access_indicator)
     ts_packet = header <> adaptation_field <> payload
     state = update_in(state, [:continuity_counters_map, pid], &(&1 + 1))
     {[ts_packet], state}
@@ -117,10 +107,9 @@ defmodule Membrane.MPEGTS.TS do
     >>
   end
 
-  defp create_adaptation_field(how_many_stuffing_bytes) do
+  defp create_adaptation_field(how_many_stuffing_bytes, random_access_indicator) do
     adaptation_field_length = how_many_stuffing_bytes + 1
     discontinuity_indicator = 0
-    random_access_indicator = 0
     elementary_stream_priority_indicator = 0
     pcr_flag = 0
     opcr_flag = 0

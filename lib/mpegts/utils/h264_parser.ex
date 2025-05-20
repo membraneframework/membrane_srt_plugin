@@ -75,6 +75,12 @@ defmodule Membrane.MPEGTS.Utils.H264Parser do
 
   defp join_nalus_in_aus(aus) do
     annexb_prefix = <<0, 0, 0, 1>>
-    Enum.map(aus, fn au -> Enum.map_join(au, &(annexb_prefix <> &1.payload)) end)
+
+    Enum.map(aus, fn au ->
+      %{
+        payload: Enum.map_join(au, &(annexb_prefix <> &1.payload)),
+        is_keyframe: Enum.any?(au, &(&1.type == :idr))
+      }
+    end)
   end
 end

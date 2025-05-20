@@ -81,22 +81,25 @@ defmodule Membrane.SRT.IntegrationTest do
 
     @impl true
     def handle_child_notification({:mpeg_ts_pmt, pmt}, :demuxer, _ctx, state) do
-      audio_id = get_pad_id(pmt, :AAC)
-      video_id = get_pad_id(pmt, :H264)
+      audio_spec = get_pad_id(pmt, :AAC, :connector_audio)
+      video_spec = get_pad_id(pmt, :H264, :connector_video)
 
-      spec = [
-        get_child(:demuxer) |> via_out(Pad.ref(:output, audio_id)) |> get_child(:connector_audio),
-        get_child(:demuxer) |> via_out(Pad.ref(:output, video_id)) |> get_child(:connector_video)
-      ]
-
-      {[spec: spec], state}
+      {[spec: audio_spec ++ video_spec], state}
     end
 
-    defp get_pad_id(pmt, stream_type) do
-      {id, _track} =
-        Enum.find(pmt.streams, fn {_id, track} -> track.stream_type == stream_type end)
+    defp get_pad_id(pmt, stream_type, connector_name) do
+      Enum.find(pmt.streams, fn {_id, track} -> track.stream_type == stream_type end)
+      |> case do
+        {id, _track} ->
+          [
+            get_child(:demuxer)
+            |> via_out(Pad.ref(:output, {:stream_id, id}))
+            |> get_child(connector_name)
+          ]
 
-      {:stream_id, id}
+        nil ->
+          []
+      end
     end
   end
 
@@ -108,6 +111,8 @@ defmodule Membrane.SRT.IntegrationTest do
     output_video = Path.join(ctx.tmp_dir, "out.h264")
     input_audio = "test/fixtures/bbb.aac"
     input_video = "test/fixtures/bbb.h264"
+    # ref video contains AUD as H264 stream transported within MPEGTS needs to be AUD delimeted
+    ref_video = "test/fixtures/bbb_with_aud.h264"
 
     receiver =
       Pipeline.start_link_supervised!(
@@ -147,6 +152,6 @@ defmodule Membrane.SRT.IntegrationTest do
     Membrane.Pipeline.terminate(receiver)
 
     assert File.read!(input_audio) == File.read!(output_audio)
-    assert File.read!(input_video) == File.read!(output_video)
+    assert File.read!(ref_video) == File.read!(output_video)
   end
 end

@@ -25,7 +25,7 @@ defmodule Membrane.MPEGTS.Muxer do
     state = %{
       ts: ts_state,
       tracks_pids: [],
-      next_pid: 0
+      next_es_pid: 32
     }
 
     {pat_payload, state}
@@ -52,7 +52,7 @@ defmodule Membrane.MPEGTS.Muxer do
   """
   @spec put_frame(binary(), track(), non_neg_integer(), non_neg_integer(), t()) :: {binary(), t()}
   def put_frame(frame, track_type, pts_ms, dts_ms, state) do
-    frame = preprocess_frame(frame, track_type)
+    {frame, is_keyframe} = preprocess_frame(frame, track_type)
     pid = state.tracks_pids[track_type]
 
     {pts, dts} =
@@ -69,13 +69,13 @@ defmodule Membrane.MPEGTS.Muxer do
         pts,
         dts
       )
-      |> TS.serialize_pes(pid, state.ts)
+      |> TS.serialize_pes(pid, state.ts, is_keyframe)
 
     {Enum.join(ts_packets), %{state | ts: ts_state}}
   end
 
   defp generate_new_track_pid(state) do
-    {state.next_pid, Map.update(state, :next_pid, 0, &(&1 + 1))}
+    {state.next_es_pid, Map.update(state, :next_es_pid, 0, &(&1 + 1))}
   end
 
   defp create_pat(ts_state) do
@@ -91,35 +91,41 @@ defmodule Membrane.MPEGTS.Muxer do
     {rest_of_frames, _parser} = H264Parser.flush(parser)
     frames = frames ++ rest_of_frames
 
-    case frames do
-      [_frame] ->
-        :ok
+    is_keyframe =
+      case frames do
+        [frame] ->
+          frame.is_keyframe
 
-      frames ->
-        Logger.warning("""
-        You provided an H264 payload that consists of #{length(frames)} access
-        units. `#{inspect(__MODULE__)}.put_frame/5` should be called with a payload of a single frame.
-        """)
-    end
+        frames ->
+          Logger.warning("""
+          You provided an H264 payload that consists of #{length(frames)} access
+          units. `#{inspect(__MODULE__)}.put_frame/5` should be called with a payload of a single frame.
+          """)
 
-    H264Parser.maybe_add_aud(frame)
+          false
+      end
+
+    {H264Parser.maybe_add_aud(frame), is_keyframe}
   end
 
   defp preprocess_frame(frame, :audio) do
     parser = AACParser.new()
     {frames, _parser} = AACParser.parse(frame, parser)
 
-    case frames do
-      [_frame] ->
-        :ok
+    is_keyframe =
+      case frames do
+        [_frame] ->
+          true
 
-      frames ->
-        Logger.warning("""
-        You provided an AAC payload that consists of #{length(frames)} frames.
-          `#{inspect(__MODULE__)}.put_frame/5` should be called with a payload of a single frame.
-        """)
-    end
+        frames ->
+          Logger.warning("""
+          You provided an AAC payload that consists of #{length(frames)} frames.
+            `#{inspect(__MODULE__)}.put_frame/5` should be called with a payload of a single frame.
+          """)
 
-    frame
+          false
+      end
+
+    {frame, is_keyframe}
   end
 end

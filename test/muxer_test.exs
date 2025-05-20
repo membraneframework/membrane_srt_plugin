@@ -62,6 +62,7 @@ defmodule Membrane.SRT.MuxerTest do
     {aus, parser} = H264Parser.parse(input, H264Parser.new())
     {final_aus, _parser} = H264Parser.flush(parser)
     aus = aus ++ final_aus
+    aus = Enum.map(aus, & &1.payload)
 
     Enum.with_index(aus) |> Enum.map(fn {au, i} -> {i * 1000 / fps, :video, au} end)
   end
