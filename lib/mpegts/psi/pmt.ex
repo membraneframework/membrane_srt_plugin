@@ -7,7 +7,9 @@ defmodule Membrane.MPEGTS.PMT do
   Returns serialized Program Map Table with given program number and version, for provided
   list of elementary stream PIDs that form given program.
   """
-  @spec serialize(non_neg_integer(), non_neg_integer(), [non_neg_integer()]) :: binary()
+  @spec serialize(non_neg_integer(), non_neg_integer(), [
+          {Membrane.MPEGTS.Muxer.track(), non_neg_integer()}
+        ]) :: binary()
   def serialize(program_number, version, pids) do
     # CONTENT
     pcr_pid = 0x1FFF

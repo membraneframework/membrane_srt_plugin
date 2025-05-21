@@ -1,15 +1,15 @@
 defmodule Membrane.MPEGTS.Utils.H264Parser do
   @moduledoc false
 
-  alias Membrane.H26x.NALuSplitter
-  alias Membrane.H264.NALuParser
   alias Membrane.H264.AUSplitter
+  alias Membrane.H264.NALuParser
+  alias Membrane.H26x.NALuSplitter
 
   @aud <<0x00, 0x00, 0x00, 0x01, 0x09, 0x16>>
 
   @type t :: %{
           nalu_splitter: NALuSplitter.t(),
-          nalu_parser: NALuParser.t(),
+          nalu_parser: Membrane.H26x.NALuParser.t(),
           au_splitter: AUSplitter.t()
         }
 

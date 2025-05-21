@@ -1,9 +1,9 @@
 defmodule Membrane.SRT.IntegrationTest do
   @moduledoc false
   use ExUnit.Case, async: true
-  alias Membrane.Testing.Pipeline
   import Membrane.ChildrenSpec
   import Membrane.Testing.Assertions
+  alias Membrane.Testing.Pipeline
 
   @ip "127.0.0.1"
   @port 12_000

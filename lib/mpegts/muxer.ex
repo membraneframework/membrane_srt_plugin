@@ -2,9 +2,9 @@ defmodule Membrane.MPEGTS.Muxer do
   @moduledoc """
   A module with functionalities allowing for muxing stream into the MPEG-TS container.
   """
-  alias Membrane.MPEGTS.{PAT, PMT, PES, TS}
-  alias Membrane.MPEGTS.Utils.{AACParser, H264Parser}
   require Logger
+  alias Membrane.MPEGTS.{PAT, PES, PMT, TS}
+  alias Membrane.MPEGTS.Utils.{AACParser, H264Parser}
 
   @pat_pid 0x0
   @pmt_pid 0x1000
@@ -12,12 +12,12 @@ defmodule Membrane.MPEGTS.Muxer do
   @clock_rate 90_000
 
   @type track :: :audio | :video
-  @type t :: %{ts: TS.t(), tracks_pids: [{track(), pos_integer()}]}
+  @type t :: %{ts: TS.t(), tracks_pids: [{track(), pos_integer()}], next_es_pid: pos_integer()}
 
   @doc """
   Creates a new muxer instance and returns initial payload with container metadata.
   """
-  @spec new() :: t()
+  @spec new() :: {binary(), t()}
   def new() do
     ts_state = TS.new() |> TS.add_pid(@pat_pid) |> TS.add_pid(@pmt_pid)
     {pat_payload, ts_state} = create_pat(ts_state)
