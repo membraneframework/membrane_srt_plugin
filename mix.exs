@@ -39,7 +39,7 @@ defmodule Membrane.SRT.Mixfile do
     [
       {:membrane_core, "~> 1.2.3"},
       {:ex_libsrt,
-       github: "membraneframework-labs/ex_libsrt", ref: "08bfc4aabd6cd258853673cbad43a600189c2c43"},
+       github: "membraneframework-labs/ex_libsrt", ref: "6b331cc5e07c1a066c7bf53b14dedb91efe29e5d"},
       {:membrane_mpeg_ts_plugin, github: "kim-company/membrane_mpeg_ts_plugin"},
       {:membrane_timestamp_queue, "~> 0.2.2"},
       {:crc, "~> 0.10"},
