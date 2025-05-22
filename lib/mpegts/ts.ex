@@ -1,5 +1,7 @@
 defmodule Membrane.MPEGTS.TS do
-  @moduledoc false
+  @moduledoc """
+  Module responsible for wrapping PES and PSI into TS packets.
+  """
 
   @opaque t :: %{continuity_counters_map: %{non_neg_integer() => non_neg_integer()}}
 
