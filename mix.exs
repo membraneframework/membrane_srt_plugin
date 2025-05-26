@@ -38,10 +38,16 @@ defmodule Membrane.SRT.Mixfile do
   defp deps do
     [
       {:membrane_core, "~> 1.2.3"},
-      {:ex_libsrt, github: "membraneframework-labs/ex_libsrt", branch: "varsill/sleep_before_closing_socket"},
+      {:ex_libsrt,
+       github: "membraneframework-labs/ex_libsrt", ref: "6b331cc5e07c1a066c7bf53b14dedb91efe29e5d"},
       {:membrane_mpeg_ts_plugin, github: "kim-company/membrane_mpeg_ts_plugin"},
+      {:membrane_timestamp_queue, "~> 0.2.2"},
+      {:crc, "~> 0.10"},
+      {:membrane_aac_plugin, "~> 0.19.0", optional: true},
+      {:membrane_h26x_plugin, "~> 0.10.0", optional: true},
+      {:membrane_mp4_plugin, "~> 0.35.0", optional: true},
+      {:membrane_file_plugin, "~> 0.17.0", optiona: true},
       {:membrane_realtimer_plugin, "~> 0.10.1", only: :test},
-      {:membrane_file_plugin, "~> 0.17.2", only: :test},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
       {:dialyxir, ">= 0.0.0", only: :dev, runtime: false},
       {:credo, ">= 0.0.0", only: :dev, runtime: false}
