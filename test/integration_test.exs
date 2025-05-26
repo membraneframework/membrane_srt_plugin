@@ -104,7 +104,7 @@ defmodule Membrane.SRT.IntegrationTest do
   end
 
   @tag :tmp_dir
-  test "if the MPEGTS MuxerFilter muxes AAC and H264 streams into MPEGTS stream that can be sent via
+  test "if the MPEGTS Muxer muxes AAC and H264 streams into MPEGTS stream that can be sent via
     SRT received by the SRT Source",
        ctx do
     output_audio = Path.join(ctx.tmp_dir, "out.aac")
@@ -133,7 +133,7 @@ defmodule Membrane.SRT.IntegrationTest do
       child(:audio_source, %Membrane.File.Source{location: input_audio})
       |> child(:audio_parser, Membrane.AAC.Parser)
       |> via_in(:audio_input)
-      |> child(:muxer, Membrane.MPEGTS.MuxerFilter)
+      |> child(:muxer, Membrane.MPEGTS.Muxer)
       |> child(:realtimer, Membrane.Realtimer)
       |> child(:sink, %Membrane.SRT.Sink{ip: @ip, port: @port, stream_id: @stream_id}),
       child(:video_source, %Membrane.File.Source{location: input_video})

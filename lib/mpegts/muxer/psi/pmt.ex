@@ -1,4 +1,4 @@
-defmodule Membrane.MPEGTS.PMT do
+defmodule Membrane.MPEGTS.Muxer.PMT do
   @moduledoc false
 
   @reserved 0
@@ -8,7 +8,7 @@ defmodule Membrane.MPEGTS.PMT do
   list of elementary stream PIDs that form given program.
   """
   @spec serialize(non_neg_integer(), non_neg_integer(), [
-          {Membrane.MPEGTS.Muxer.track(), non_neg_integer()}
+          {Membrane.MPEGTS.Muxer.Engine.track(), non_neg_integer()}
         ]) :: binary()
   def serialize(program_number, version, pids) do
     # CONTENT

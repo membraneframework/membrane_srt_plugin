@@ -1,20 +1,20 @@
-defmodule Membrane.SRT.MuxerTest do
+defmodule Membrane.SRT.Muxer.EngineTest do
   @moduledoc false
   use ExUnit.Case, async: true
-  alias Membrane.MPEGTS.Muxer
-  alias Membrane.MPEGTS.Utils.{AACParser, H264Parser}
+  alias Membrane.MPEGTS.Muxer.Engine
+  alias Membrane.MPEGTS.Muxer.{AACParser, H264Parser}
 
   test "if the MPEG TS muxes H264 stream" do
     input_path = "test/fixtures/bbb.h264"
     reference_path = "test/fixtures/reference_only_video.ts"
 
     video_frames = get_video_frames(input_path, 30)
-    {payload1, state} = Muxer.new()
-    {payload2, state} = Muxer.register_track(:video, state)
+    {payload1, state} = Engine.new()
+    {payload2, state} = Engine.register_track(:video, state)
 
     {packets, _state} =
       Enum.map_reduce(video_frames, state, fn {ts, type, frame}, state ->
-        Muxer.put_frame(frame, type, ts, ts, state)
+        Engine.put_frame(frame, type, ts, ts, state)
       end)
 
     payload3 = Enum.join(packets)
@@ -33,13 +33,13 @@ defmodule Membrane.SRT.MuxerTest do
     sorted_frames =
       Enum.sort_by(video_frames ++ audio_frames, fn {ts, _type, _packet} -> ts end)
 
-    {payload1, state} = Muxer.new()
-    {payload2, state} = Muxer.register_track(:audio, state)
-    {payload3, state} = Muxer.register_track(:video, state)
+    {payload1, state} = Engine.new()
+    {payload2, state} = Engine.register_track(:audio, state)
+    {payload3, state} = Engine.register_track(:video, state)
 
     {packets, _state} =
       Enum.map_reduce(sorted_frames, state, fn {ts, type, frame}, state ->
-        Muxer.put_frame(frame, type, ts, ts, state)
+        Engine.put_frame(frame, type, ts, ts, state)
       end)
 
     payload4 = Enum.join(packets)

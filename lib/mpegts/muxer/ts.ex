@@ -1,4 +1,4 @@
-defmodule Membrane.MPEGTS.TS do
+defmodule Membrane.MPEGTS.Muxer.TS do
   @moduledoc """
   Module responsible for wrapping PES and PSI into TS packets.
   """

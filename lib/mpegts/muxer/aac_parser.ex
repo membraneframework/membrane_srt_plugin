@@ -1,4 +1,4 @@
-defmodule Membrane.MPEGTS.Utils.AACParser do
+defmodule Membrane.MPEGTS.Muxer.AACParser do
   @moduledoc false
 
   require Logger

@@ -1,4 +1,4 @@
-defmodule Membrane.MPEGTS.PAT do
+defmodule Membrane.MPEGTS.Muxer.PAT do
   @moduledoc false
 
   @doc """

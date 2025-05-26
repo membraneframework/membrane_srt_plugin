@@ -1,131 +1,109 @@
 defmodule Membrane.MPEGTS.Muxer do
   @moduledoc """
-  A module with functionalities allowing for muxing stream into the MPEG-TS container.
+  A Membrane Filter that provides muxing capabilities for the MPEG TS container.
   """
-  require Logger
-  alias Membrane.MPEGTS.{PAT, PES, PMT, TS}
-  alias Membrane.MPEGTS.Utils.{AACParser, H264Parser}
 
-  @pat_pid 0x0
-  @pmt_pid 0x1000
-  @program_number 0x1
-  @clock_rate 90_000
+  use Membrane.Filter
+  alias Membrane.MPEGTS.Muxer.Engine
+  alias Membrane.TimestampQueue, as: TQ
 
-  @type track :: :audio | :video
-  @type t :: %{ts: TS.t(), tracks_pids: [{track(), pos_integer()}], next_es_pid: pos_integer()}
+  def_input_pad :audio_input,
+    accepted_format: %Membrane.AAC{encapsulation: :ADTS},
+    availability: :on_request
 
-  @doc """
-  Creates a new muxer instance and returns initial payload with container metadata.
-  """
-  @spec new() :: {binary(), t()}
-  def new() do
-    ts_state = TS.new() |> TS.add_pid(@pat_pid) |> TS.add_pid(@pmt_pid)
-    {pat_payload, ts_state} = create_pat(ts_state)
+  def_input_pad :video_input,
+    accepted_format: %Membrane.H264{alignment: :au},
+    availability: :on_request
 
-    state = %{
-      ts: ts_state,
-      tracks_pids: [],
-      next_es_pid: 32
-    }
+  def_output_pad :output, accepted_format: Membrane.RemoteStream
 
-    {pat_payload, state}
+  @impl true
+  def handle_init(_ctx, _opts) do
+    {payload, muxer} = Engine.new()
+    {[], %{tq: TQ.new(), muxer: muxer, buffered_payload: payload}}
   end
 
-  @doc """
-  Adds a new track to the muxer and returns track metadata.
-  """
-  @spec register_track(track(), t()) :: {binary(), t()}
-  def register_track(track_type, state) when track_type in [:audio, :video] do
-    {new_track_pid, state} = generate_new_track_pid(state)
-    tracks_pids = [{track_type, new_track_pid} | state.tracks_pids]
-    ts_state = TS.add_pid(state.ts, new_track_pid)
+  @impl true
+  def handle_pad_added(pad, %{playback: :stopped}, state) do
+    state = update_in(state.tq, &TQ.register_pad(&1, pad, wait_on_buffers?: true))
+    {binary, muxer} = Engine.register_track(get_track_type(pad), state.muxer)
 
-    {pmt_packets, ts_state} =
-      PMT.serialize(@program_number, length(tracks_pids) - 1, tracks_pids)
-      |> TS.serialize_psi(@pmt_pid, ts_state)
-
-    {Enum.join(pmt_packets), %{state | tracks_pids: tracks_pids, ts: ts_state}}
+    {[], %{state | muxer: muxer, buffered_payload: state.buffered_payload <> binary}}
   end
 
-  @doc """
-  Adds a frame to a given track and returns next part of the container payload.
-  """
-  @spec put_frame(binary(), track(), non_neg_integer(), non_neg_integer(), t()) :: {binary(), t()}
-  def put_frame(frame, track_type, pts_ms, dts_ms, state) do
-    {frame, is_keyframe} = preprocess_frame(frame, track_type)
-    pid = state.tracks_pids[track_type]
-
-    {pts, dts} =
-      if pts_ms != nil and dts_ms != nil do
-        {ceil(pts_ms * @clock_rate / 1000), ceil(dts_ms * @clock_rate / 1000)}
-      else
-        {nil, nil}
-      end
-
-    {ts_packets, ts_state} =
-      PES.serialize(
-        frame,
-        pid,
-        pts,
-        dts
-      )
-      |> TS.serialize_pes(pid, state.ts, is_keyframe)
-
-    {Enum.join(ts_packets), %{state | ts: ts_state}}
+  @impl true
+  def handle_pad_added(_pad, _ctx, _state) do
+    raise "All the pads need to be connected before the muxer enters playing playback."
   end
 
-  defp generate_new_track_pid(state) do
-    {state.next_es_pid, Map.update(state, :next_es_pid, 0, &(&1 + 1))}
+  @impl true
+  def handle_playing(_ctx, state) do
+    {[
+       stream_format: {:output, %Membrane.RemoteStream{}},
+       buffer: {:output, %Membrane.Buffer{payload: state.buffered_payload, pts: 0, dts: 0}}
+     ], %{state | buffered_payload: <<>>}}
   end
 
-  defp create_pat(ts_state) do
-    {pat_packets, ts_state} =
-      PAT.serialize(@program_number, @pmt_pid)
-      |> TS.serialize_psi(@pat_pid, ts_state)
-
-    {Enum.join(pat_packets), ts_state}
+  @impl true
+  def handle_stream_format(_pad, _stream_format, _ctx, state) do
+    {[], state}
   end
 
-  defp preprocess_frame(frame, :video) do
-    {frames, parser} = H264Parser.parse(frame, H264Parser.new())
-    {rest_of_frames, _parser} = H264Parser.flush(parser)
-    frames = frames ++ rest_of_frames
-
-    is_keyframe =
-      case frames do
-        [frame] ->
-          frame.is_keyframe
-
-        frames ->
-          Logger.warning("""
-          You provided an H264 payload that consists of #{length(frames)} access
-          units. `#{inspect(__MODULE__)}.put_frame/5` should be called with a payload of a single frame.
-          """)
-
-          false
-      end
-
-    {H264Parser.maybe_add_aud(frame), is_keyframe}
+  @impl true
+  def handle_buffer(pad, buffer, _ctx, state) do
+    buffer = %{buffer | pts: buffer.pts || buffer.dts, dts: buffer.dts || buffer.pts}
+    {auto_demand_actions, tq} = TQ.push_buffer(state.tq, pad, buffer)
+    state = %{state | tq: tq}
+    {actions, state} = pop_items(state)
+    {auto_demand_actions ++ actions, state}
   end
 
-  defp preprocess_frame(frame, :audio) do
-    parser = AACParser.new()
-    {frames, _parser} = AACParser.parse(frame, parser)
+  @impl true
+  def handle_end_of_stream(pad, ctx, state) do
+    {actions, state} = update_in(state.tq, &TQ.push_end_of_stream(&1, pad)) |> pop_items()
+    {actions ++ maybe_eos(ctx), state}
+  end
 
-    is_keyframe =
-      case frames do
-        [_frame] ->
-          true
+  defp maybe_eos(ctx) do
+    eos_on_all_inputs? =
+      Enum.filter(ctx.pads, fn {pad_name, _pad} -> pad_name != :output end)
+      |> Enum.all?(fn {_pad_name, pad} -> pad.end_of_stream? end)
 
-        frames ->
-          Logger.warning("""
-          You provided an AAC payload that consists of #{length(frames)} frames.
-            `#{inspect(__MODULE__)}.put_frame/5` should be called with a payload of a single frame.
-          """)
+    if eos_on_all_inputs?, do: [end_of_stream: :output], else: []
+  end
 
-          false
-      end
+  defp pop_items(state) do
+    {auto_demand_actions, items, tq} = TQ.pop_available_items(state.tq)
+    {actions, muxer} = process_popped_items(items, state.muxer)
+    {auto_demand_actions ++ actions, %{state | tq: tq, muxer: muxer}}
+  end
 
-    {frame, is_keyframe}
+  defp process_popped_items(items, muxer) do
+    Enum.flat_map_reduce(items, muxer, fn
+      {_pad, :end_of_stream}, muxer ->
+        {[], muxer}
+
+      {pad, {:buffer, buffer}}, muxer ->
+        pts_ms = Membrane.Time.as_milliseconds(buffer.pts, :round)
+        dts_ms = Membrane.Time.as_milliseconds(buffer.dts, :round)
+
+        {payload, muxer} =
+          Engine.put_frame(buffer.payload, get_track_type(pad), pts_ms, dts_ms, muxer)
+
+        {[
+           buffer: {:output, %Membrane.Buffer{payload: payload, pts: buffer.pts, dts: buffer.dts}}
+         ], muxer}
+
+      {pad, {action, stream_element}}, muxer ->
+        {[{action, {pad, stream_element}}], muxer}
+    end)
+  end
+
+  defp get_track_type(Pad.ref(:audio_input, _ref)) do
+    :audio
+  end
+
+  defp get_track_type(Pad.ref(:video_input, _ref)) do
+    :video
   end
 end

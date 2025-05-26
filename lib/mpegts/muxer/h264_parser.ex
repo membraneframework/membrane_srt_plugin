@@ -1,4 +1,4 @@
-defmodule Membrane.MPEGTS.Utils.H264Parser do
+defmodule Membrane.MPEGTS.Muxer.H264Parser do
   @moduledoc false
 
   alias Membrane.H264.AUSplitter

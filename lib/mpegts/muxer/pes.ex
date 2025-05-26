@@ -1,4 +1,4 @@
-defmodule Membrane.MPEGTS.PES do
+defmodule Membrane.MPEGTS.Muxer.PES do
   @moduledoc false
 
   @doc """
