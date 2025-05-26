@@ -24,16 +24,14 @@ defmodule Membrane.MPEGTS.Utils.AACParser do
     payload = state.acc <> payload
     state = %{state | acc: <<>>}
 
-    read_header(payload)
-    |> read_crc()
-    |> read_frame()
-    |> case do
-      :error ->
+    with {:ok, parsing_state} <- read_header(payload),
+         {:ok, parsing_state} <- read_crc(parsing_state),
+         {:ok, frame, rest} <- read_frame(parsing_state) do
+      {frames, state} = parse(rest, state)
+      {[frame | frames], state}
+    else
+      _error ->
         {[], %{state | acc: payload}}
-
-      {frame, rest} ->
-        {frames, state} = parse(rest, state)
-        {[frame | frames], state}
     end
   end
 
@@ -46,34 +44,36 @@ defmodule Membrane.MPEGTS.Utils.AACParser do
           Logger.warning("Unsupported `aac_frame_cnt` value of: #{inspect(aac_frame_cnt)}")
         end
 
-        %{
-          left_to_parse: rest,
-          frame_payload: header,
-          next_frame_length: frame_length,
-          header_crc_absence: crc_absence
-        }
+        {:ok,
+         %{
+           left_to_parse: rest,
+           frame_payload: header,
+           next_frame_length: frame_length,
+           header_crc_absence: crc_absence
+         }}
 
       _other ->
         :error
     end
   end
 
-  defp read_header(_other), do: :error
+  defp read_header(_other) do
+    :error
+  end
 
   defp read_crc(
          %{left_to_parse: <<crc::binary-size(2), rest::binary>>, header_crc_absence: 0} =
            parsing_state
        ) do
-    %{parsing_state | left_to_parse: rest, frame_payload: parsing_state.frame_payload <> crc}
+    {:ok,
+     %{parsing_state | left_to_parse: rest, frame_payload: parsing_state.frame_payload <> crc}}
   end
 
   defp read_crc(%{header_crc_absence: 1} = parsing_state) do
-    parsing_state
+    {:ok, parsing_state}
   end
 
-  defp read_crc(:error), do: :error
-
-  defp read_frame(:error) do
+  defp read_crc(_parsing_state) do
     :error
   end
 
@@ -82,7 +82,7 @@ defmodule Membrane.MPEGTS.Utils.AACParser do
 
     case parsing_state.left_to_parse do
       <<frame::binary-size(frame_length), rest::binary>> ->
-        {parsing_state.frame_payload <> frame, rest}
+        {:ok, parsing_state.frame_payload <> frame, rest}
 
       _other ->
         :error
