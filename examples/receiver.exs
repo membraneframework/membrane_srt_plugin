@@ -1,7 +1,5 @@
 Mix.install([
   {:membrane_srt_plugin, path: "./"},
-  :membrane_aac_plugin,
-  :membrane_h26x_plugin,
   :membrane_mp4_plugin,
   :membrane_file_plugin
 ])
@@ -12,7 +10,7 @@ defmodule ReceivingPipeline do
   @impl true
   def handle_init(_ctx, opts) do
     spec =
-      child(%Membrane.SRT.Source{port: opts[:port], stream_id: opts[:stream_id]})
+      child(%Membrane.SRT.Source{ip: opts[:ip], port: opts[:port], stream_id: opts[:stream_id]})
       |> child(:demuxer, Membrane.MPEG.TS.Demuxer)
 
     {[spec: spec], %{}}
@@ -27,7 +25,7 @@ defmodule ReceivingPipeline do
         |> then(
           &case type do
             :H264 ->
-              &1 |> child(%Membrane.H264.Parser{output_stream_structure: :avc1})
+              child(&1, %Membrane.H264.Parser{output_stream_structure: :avc1})
 
             :AAC ->
               &1 |> child(%Membrane.AAC.Parser{out_encapsulation: :none, output_config: :esds})
@@ -57,7 +55,7 @@ defmodule ReceivingPipeline do
 end
 
 {:ok, receiving_supervisor, _pipeline} =
-  Membrane.Pipeline.start_link(ReceivingPipeline, port: 1234, stream_id: "some_stream_id")
+  Membrane.Pipeline.start_link(ReceivingPipeline, ip: "0.0.0.0", port: 1234, stream_id: "some_stream_id")
 
 Process.monitor(receiving_supervisor)
 
