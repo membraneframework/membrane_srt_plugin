@@ -44,7 +44,7 @@ defmodule Membrane.SRT.Mixfile do
       {:membrane_timestamp_queue, "~> 0.2.2"},
       {:crc, "~> 0.10"},
       {:membrane_aac_plugin, "~> 0.19.0"},
-      {:membrane_h26x_plugin, "~> 0.10.3"},
+      {:membrane_h26x_plugin, "~> 0.10.4"},
       {:membrane_mp4_plugin, "~> 0.35.0", optional: true},
       {:membrane_file_plugin, "~> 0.17.0", optiona: true},
       {:membrane_realtimer_plugin, "~> 0.10.1", only: :test},
