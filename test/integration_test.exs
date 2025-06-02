@@ -58,7 +58,6 @@ defmodule Membrane.SRT.IntegrationTest do
   end
 
   @tag :tmp_dir
-  @tag :sometag
   test "if the sink sends SRT stream that can be received by the source using external server",
        ctx do
     receiver = Pipeline.start_link_supervised!()
