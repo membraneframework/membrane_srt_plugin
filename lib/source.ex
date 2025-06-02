@@ -46,51 +46,6 @@ defmodule Membrane.SRT.Source do
                 """
               ]
 
-  defmodule ClientHandlerImpl do
-    @behaviour ExLibSRT.Connection.Handler
-
-    @impl true
-    def init(__MODULE__) do
-      %{source_pid: nil, buffered: []}
-    end
-
-    @impl true
-    def handle_connected(_id, _stream_id, state) do
-      {:ok, state}
-    end
-
-    @impl true
-    def handle_disconnected(state) do
-      send(state.source_pid, :client_handler_end_of_stream)
-      :ok
-    end
-
-    @impl true
-    def handle_data(payload, %{source_pid: nil} = state) do
-      state = %{state | buffered: [payload | state.buffered]}
-      {:ok, state}
-    end
-
-    @impl true
-    def handle_data(payload, state) do
-      send(state.source_pid, {:client_handler_data, payload})
-      {:ok, state}
-    end
-
-    @impl true
-    def handle_info({:source_pid, pid}, state) do
-      if state.source_pid != nil do
-        Membrane.Logger.warning("Overwritting of the source pid.")
-      end
-
-      Enum.reverse(state.buffered)
-      |> Enum.each(send(pid, &{:client_handler_data, &1}))
-
-      state = %{state | source_pid: pid, buffered: []}
-      {:ok, state}
-    end
-  end
-
   defguardp is_builtin_server(state)
             when not is_nil(state.ip) and not is_nil(state.port) and not is_nil(state.stream_id) and
                    is_nil(state.server_waiting_for_connection_accept)
