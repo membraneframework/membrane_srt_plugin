@@ -63,7 +63,7 @@ defmodule Membrane.SRT.Source do
       raise """
         `#{inspect(__MODULE__)}` accepts the following excluding sets of options:
         * `port`, 'ip' and `stream_id`
-        * 'server' waiting fo connection accepting
+        * 'server_waiting_for_connection_accept`
         while you provided: #{inspect(opts)}
       """
     end
