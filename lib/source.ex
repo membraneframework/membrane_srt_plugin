@@ -114,16 +114,6 @@ defmodule Membrane.SRT.Source do
     {[end_of_stream: :output], state}
   end
 
-  # @impl true
-  # def handle_info({:client_handler_data, payload}, _ctx, state) when is_external_server(state) do
-  #   {[buffer: {:output, %Membrane.Buffer{payload: payload}}], state}
-  # end
-  #
-  # @impl true
-  # def handle_info(:client_handler_end_of_stream, _ctx, state) when is_external_server(state) do
-  #   {[end_of_stream: :output], state}
-  # end
-
   @impl true
   def handle_info(message, _ctx, state) do
     Membrane.Logger.warning("Received unknown message: #{inspect(message)}")
