@@ -92,7 +92,7 @@ defmodule Membrane.SRT.Source do
     else
       Membrane.Logger.warning(
         "Received connection request for stream with ID: #{inspect(stream_id)} which is not accepted
-        by this server. Server expects stream with ID: #{inspect(stream_id)}"
+        by this server. Server expects stream with ID: #{inspect(state.stream_id)}"
       )
     end
 
