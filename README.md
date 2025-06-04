@@ -18,25 +18,49 @@ def deps do
   ]
 end
 ```
-
 ## Usage
 
-First start the receiving pipeline:
+### Usage of the `Membrane.SRT.Source` with built-in server
+
+In the simplest scenario `Membrane.SRT.Source` can be used in a built-in server mode.
+It starts the `ExLibSRT.Server` on its own and then accept only a single client connection
+with the assumed stream ID.
+To see how it works you can run the following script:
 ```
 elixir examples/receiver.exs
+
 ```
 The receiver will be waiting for the SRT connection on port 1234 for all the available network interfaces.
-When the SRT client connects, the content of stream sent via SRT will be demuxed and saved to MP4 file.
+When the SRT client with assumed stream ID (`some_stream_id`) connects, the content of stream sent via SRT
+will be demuxed and saved to MP4 file named `output.mp4`.
 
-Then start another shell and run the sending pipeline:
+### Usage of the `Membrane.SRT.Source` with external server
+
+If you don't know the client's stream ID in advance or when you want to handle multiple client connections on the same server port,
+you can use the `Membrane.SRT.Source` in external server mode.
+Run the following script:
+```
+elixir examples/receiver_with_external_server.exs
+```
+
+It starts a standalone `ExLibSRT.Server` and then each time a new client connects, it spawns a pipeline with
+`Membrane.SRT.Source` using the external server reference.
+
+### Usage of the `Membrane.SRT.Client`
+
+`Membrane.SRT.Client` connects on the given address and starts streaming with given stream ID.
+To see it in action, run:
 ```
 elixir examples/sender.exs
 ```
 
 The sender will send a fixture content of MPEG-TS file via SRT on `127.0.0.1:1234` with stream id:
 `some_stream_id`.
-When the processeses terminate, you should be able to run `output.mp4` file with the streamed
-content.
+
+
+You can run one of the receiver scripts (`examples/receiver.exs` or
+`examples/receiver_with_external_server.exs`) and then in a new shell you can run `examples/sender.exs`
+to see how the SRT connection is estabilished.
 
 ## Copyright and License
 
