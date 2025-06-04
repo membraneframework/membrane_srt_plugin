@@ -33,60 +33,89 @@ defmodule Membrane.SRT.Source do
                 ID of the stream which will be accepted by this server.
                 """
               ],
-              server_waiting_for_connection_accept: [
+              server_awaiting_accept: [
                 default: nil,
                 spec: ExLibSRT.Server.t() | nil,
                 description: """
                 Reference to `ExLibSRT.Server` which is waiting for a connection accepting.
 
+                When using this option, the other options (`ip`, `port` and `stream_id`)
+                cannot be set.
                 If you want to use `#{inspect(__MODULE__)}` with that option, remember to spawn
                 the element right after receiving `{:srt_server_connect_request, address, stream_id}`
                 message from the server - this way you will have a guarantee that the source will
                 handle the desired client.
+
+                Exemplary usage scenario:
+
+                  # Start the server listening on desired address and port
+                  {:ok, server} = ExLibSRT.Server.start(<ip>, <port>)
+
+                  # Wait until a client with desired stream_id connects
+                  receive do
+                    {:srt_server_connect_request, _address, <stream_id>} ->
+                      pid = Membrane.RCPipeline.start_link!()
+
+                      # Spawn the `#{inspect(__MODULE__)}` element and pass the server
+                      # instance as an argument
+                      spec =
+                        child(:source, %Membrane.SRT.Source{server_awaiting_accept: server})
+                        |> child(:sink, %Membrane.File.Sink{location: "output.ts"})
+                      Membrane.RCPipeline.execute_actions(pid, spec: spec)
+                  end
                 """
               ]
 
-  defguardp is_builtin_server(state)
-            when not is_nil(state.ip) and not is_nil(state.port) and not is_nil(state.stream_id) and
-                   is_nil(state.server_waiting_for_connection_accept)
-
-  defguardp is_external_server(state)
-            when is_nil(state.ip) and is_nil(state.port) and
-                   is_nil(state.stream_id) and
-                   not is_nil(state.server_waiting_for_connection_accept)
-
   @impl true
-  def handle_init(_ctx, opts) do
-    state = Map.merge(opts, %{})
-
-    if not is_builtin_server(state) and not is_external_server(state) do
-      raise """
-        `#{inspect(__MODULE__)}` accepts the following excluding sets of options:
-        * `port`, 'ip' and `stream_id`
-        * 'server_waiting_for_connection_accept`
-        while you provided: #{inspect(opts)}
-      """
-    end
-
+  def handle_init(
+        _ctx,
+        %{ip: ip, port: port, stream_id: stream_id, server_awaiting_accept: nil} = opts
+      )
+      when not is_nil(ip) and not is_nil(port) and not is_nil(stream_id) do
+    state = Map.merge(opts, %{mode: :built_in})
     {[], state}
   end
 
   @impl true
-  def handle_playing(_ctx, state) when is_builtin_server(state) do
+  def handle_init(
+        _ctx,
+        %{ip: nil, port: nil, stream_id: nil, server_awaiting_accept: server_awaiting_accept} =
+          opts
+      )
+      when not is_nil(server_awaiting_accept) do
+    state = Map.merge(opts, %{mode: :external})
+    {[], state}
+  end
+
+  @impl true
+  def handle_init(_ctx, opts) do
+    raise """
+      `#{inspect(__MODULE__)}` accepts the following excluding sets of options:
+      * `port`, 'ip' and `stream_id`
+      * 'server_awaiting_accept`
+      while you provided: #{inspect(opts)}
+    """
+  end
+
+  @impl true
+  def handle_playing(_ctx, %{mode: :built_in} = state) do
     {:ok, server} = Server.start(state.ip, state.port)
     state = Map.put_new(state, :server, server)
     {[stream_format: {:output, %Membrane.RemoteStream{}}], state}
   end
 
   @impl true
-  def handle_playing(_ctx, state) when is_external_server(state) do
-    Server.accept_awaiting_connect_request(state.server_waiting_for_connection_accept)
+  def handle_playing(_ctx, state) do
+    :ok = Server.accept_awaiting_connect_request(state.server_awaiting_accept)
     {[stream_format: {:output, %Membrane.RemoteStream{}}], state}
   end
 
   @impl true
-  def handle_info({:srt_server_connect_request, _address, stream_id}, _ctx, state)
-      when is_builtin_server(state) do
+  def handle_info(
+        {:srt_server_connect_request, _address, stream_id},
+        _ctx,
+        %{mode: :built_in} = state
+      ) do
     if stream_id == state.stream_id do
       :ok = Server.accept_awaiting_connect_request(state.server)
     else

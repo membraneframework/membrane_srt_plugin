@@ -80,7 +80,7 @@ defmodule Membrane.SRT.IntegrationTest do
     receive do
       {:srt_server_connect_request, _address, _stream_id} ->
         receiver_spec =
-          child(:source, %Membrane.SRT.Source{server_waiting_for_connection_accept: server})
+          child(:source, %Membrane.SRT.Source{server_awaiting_accept: server})
           |> child(:sink, %Membrane.File.Sink{location: output})
 
         Pipeline.execute_actions(receiver, spec: receiver_spec)
