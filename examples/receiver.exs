@@ -55,7 +55,11 @@ defmodule ReceivingPipeline do
 end
 
 {:ok, receiving_supervisor, _pipeline} =
-  Membrane.Pipeline.start_link(ReceivingPipeline, ip: "0.0.0.0", port: 1234, stream_id: "some_stream_id")
+  Membrane.Pipeline.start_link(ReceivingPipeline,
+    ip: "0.0.0.0",
+    port: 1234,
+    stream_id: "some_stream_id"
+  )
 
 Process.monitor(receiving_supervisor)
 
