@@ -105,7 +105,7 @@ defmodule Membrane.SRT.Source do
   end
 
   @impl true
-  def handle_playing(_ctx, state) do
+  def handle_playing(_ctx, %{mode: :external} = state) do
     :ok = Server.accept_awaiting_connect_request(state.server_awaiting_accept)
     {[stream_format: {:output, %Membrane.RemoteStream{}}], state}
   end
