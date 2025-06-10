@@ -35,7 +35,7 @@ defmodule Membrane.SRT.IntegrationTest do
     input = "test/fixtures/bbb.ts"
 
     receiver_spec =
-      child(:source, %Membrane.SRT.Source{port: @port, stream_id: @stream_id})
+      child(:source, %Membrane.SRT.Source{ip: "0.0.0.0", port: @port, stream_id: @stream_id})
       |> child(:sink, %Membrane.File.Sink{location: output})
 
     Pipeline.execute_actions(receiver, spec: receiver_spec)
@@ -50,7 +50,43 @@ defmodule Membrane.SRT.IntegrationTest do
 
     Pipeline.execute_actions(sender, spec: sender_spec)
 
-    assert_end_of_stream(receiver, :sink, :input, 5000)
+    assert_end_of_stream(receiver, :sink, :input, 7000)
+    Membrane.Pipeline.terminate(sender)
+    Membrane.Pipeline.terminate(receiver)
+
+    assert File.read!(input) == File.read!(output)
+  end
+
+  @tag :tmp_dir
+  test "if the sink sends SRT stream that can be received by the source using external server",
+       ctx do
+    receiver = Pipeline.start_link_supervised!()
+
+    output = Path.join(ctx.tmp_dir, "out.ts")
+    input = "test/fixtures/bbb.ts"
+
+    sender = Pipeline.start_link_supervised!()
+
+    {:ok, server} = ExLibSRT.Server.start("0.0.0.0", @port)
+
+    sender_spec =
+      child(:source, %Membrane.File.Source{location: input})
+      |> child(:timestamps_generator, TimestampsGenerator)
+      |> child(:realtimer, Membrane.Realtimer)
+      |> child(:sink, %Membrane.SRT.Sink{ip: @ip, port: @port, stream_id: @stream_id})
+
+    Pipeline.execute_actions(sender, spec: sender_spec)
+
+    receive do
+      {:srt_server_connect_request, _address, _stream_id} ->
+        receiver_spec =
+          child(:source, %Membrane.SRT.Source{server_awaiting_accept: server})
+          |> child(:sink, %Membrane.File.Sink{location: output})
+
+        Pipeline.execute_actions(receiver, spec: receiver_spec)
+    end
+
+    assert_end_of_stream(receiver, :sink, :input, 15_000)
     Membrane.Pipeline.terminate(sender)
     Membrane.Pipeline.terminate(receiver)
 
@@ -68,7 +104,7 @@ defmodule Membrane.SRT.IntegrationTest do
           stream_id: stream_id
         ) do
       spec = [
-        child(:source, %Membrane.SRT.Source{port: port, stream_id: stream_id})
+        child(:source, %Membrane.SRT.Source{ip: "0.0.0.0", port: port, stream_id: stream_id})
         |> child(:demuxer, Membrane.MPEG.TS.Demuxer),
         child(:connector_audio, Membrane.Connector)
         |> child(:sink_audio, %Membrane.File.Sink{location: output_audio}),
