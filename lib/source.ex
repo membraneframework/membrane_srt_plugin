@@ -53,7 +53,7 @@ defmodule Membrane.SRT.Source do
 
                   # Wait until a client with desired stream_id connects
                   receive do
-                    {:srt_server_connect_request, _address, <stream_id>} ->
+                    {:srt_server_connect_request, _address, _stream_id} ->
                       pid = Membrane.RCPipeline.start_link!()
 
                       # Spawn the `#{inspect(__MODULE__)}` element and pass the server
