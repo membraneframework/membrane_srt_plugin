@@ -90,7 +90,7 @@ defmodule Membrane.SRT.Source do
   @impl true
   def handle_init(_ctx, opts) do
     raise """
-      `#{inspect(__MODULE__)}` accepts the following excluding sets of options:
+      `#{inspect(__MODULE__)}` accepts the following disjoint sets of options:
       * `port`, 'ip' and `stream_id`
       * 'server_awaiting_accept`
       while you provided: #{inspect(opts)}
