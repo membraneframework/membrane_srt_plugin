@@ -33,13 +33,26 @@ defmodule Membrane.SRT.Source do
                 ID of the stream which will be accepted by this server.
                 """
               ],
+              password: [
+                default: nil,
+                spec: String.t() | nil,
+                description: """
+                Password used to authenticate the connection.
+                If set, the server will require clients to provide this password
+                when connecting.
+                If not set, the server will accept connections without authentication.
+                Note that if you set this option, you must also set the same password
+                on the client side when connecting to this server.
+                Password needs to have between 10 and 79 characters.
+                """
+              ],
               server_awaiting_accept: [
                 default: nil,
                 spec: ExLibSRT.Server.t() | nil,
                 description: """
                 Reference to `ExLibSRT.Server` which is waiting for a connection accepting.
 
-                When using this option, the other options (`ip`, `port` and `stream_id`)
+                When using this option, the other options (`ip`, `port`, `stream_id` and `password`)
                 cannot be set.
                 If you want to use `#{inspect(__MODULE__)}` with that option, remember to spawn
                 the element right after receiving `{:srt_server_connect_request, address, stream_id}`
@@ -72,7 +85,7 @@ defmodule Membrane.SRT.Source do
         %{ip: ip, port: port, stream_id: stream_id, server_awaiting_accept: nil} = opts
       )
       when not is_nil(ip) and not is_nil(port) and not is_nil(stream_id) do
-    state = Map.merge(opts, %{mode: :built_in})
+    state = Map.merge(%{mode: :built_in, password: ""}, opts)
     {[], state}
   end
 
@@ -83,7 +96,7 @@ defmodule Membrane.SRT.Source do
           opts
       )
       when not is_nil(server_awaiting_accept) do
-    state = Map.merge(opts, %{mode: :external})
+    state = Map.merge(%{mode: :external, password: ""}, opts)
     {[], state}
   end
 
@@ -99,7 +112,7 @@ defmodule Membrane.SRT.Source do
 
   @impl true
   def handle_playing(_ctx, %{mode: :built_in} = state) do
-    {:ok, server} = Server.start(state.ip, state.port)
+    {:ok, server} = Server.start(state.ip, state.port, state.password)
     state = Map.put_new(state, :server, server)
     {[stream_format: {:output, %Membrane.RemoteStream{}}], state}
   end
