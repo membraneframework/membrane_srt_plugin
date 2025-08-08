@@ -6,7 +6,6 @@ defmodule Membrane.SRT.IntegrationTest do
   alias Membrane.Testing.Pipeline
 
   @ip "127.0.0.1"
-  @port 12_000
   @stream_id "some_stream_id"
 
   defmodule TimestampsGenerator do
@@ -29,13 +28,14 @@ defmodule Membrane.SRT.IntegrationTest do
 
   @tag :tmp_dir
   test "if the sink sends SRT stream that can be received by the source", ctx do
+    port = get_free_port()
     receiver = Pipeline.start_link_supervised!()
 
     output = Path.join(ctx.tmp_dir, "out.ts")
     input = "test/fixtures/bbb.ts"
 
     receiver_spec =
-      child(:source, %Membrane.SRT.Source{ip: "0.0.0.0", port: @port, stream_id: @stream_id})
+      child(:source, %Membrane.SRT.Source{ip: "0.0.0.0", port: port, stream_id: @stream_id})
       |> child(:sink, %Membrane.File.Sink{location: output})
 
     Pipeline.execute_actions(receiver, spec: receiver_spec)
@@ -46,13 +46,13 @@ defmodule Membrane.SRT.IntegrationTest do
       child(:source, %Membrane.File.Source{location: input})
       |> child(:timestamps_generator, TimestampsGenerator)
       |> child(:realtimer, Membrane.Realtimer)
-      |> child(:sink, %Membrane.SRT.Sink{ip: @ip, port: @port, stream_id: @stream_id})
+      |> child(:sink, %Membrane.SRT.Sink{ip: @ip, port: port, stream_id: @stream_id})
 
     Pipeline.execute_actions(sender, spec: sender_spec)
 
     assert_end_of_stream(receiver, :sink, :input, 7000)
-    Membrane.Pipeline.terminate(sender)
-    Membrane.Pipeline.terminate(receiver)
+    :ok = Membrane.Pipeline.terminate(sender)
+    :ok = Membrane.Pipeline.terminate(receiver)
 
     assert File.read!(input) == File.read!(output)
   end
@@ -60,6 +60,7 @@ defmodule Membrane.SRT.IntegrationTest do
   @tag :tmp_dir
   test "if the sink sends SRT stream that can be received by the source using external server",
        ctx do
+    port = get_free_port()
     receiver = Pipeline.start_link_supervised!()
 
     output = Path.join(ctx.tmp_dir, "out.ts")
@@ -67,14 +68,14 @@ defmodule Membrane.SRT.IntegrationTest do
 
     sender = Pipeline.start_link_supervised!()
 
-    {:ok, server} = ExLibSRT.Server.start("0.0.0.0", @port)
+    {:ok, server} = ExLibSRT.Server.start("0.0.0.0", port)
     on_exit(fn -> ExLibSRT.Server.stop(server) end)
 
     sender_spec =
       child(:source, %Membrane.File.Source{location: input})
       |> child(:timestamps_generator, TimestampsGenerator)
       |> child(:realtimer, Membrane.Realtimer)
-      |> child(:sink, %Membrane.SRT.Sink{ip: @ip, port: @port, stream_id: @stream_id})
+      |> child(:sink, %Membrane.SRT.Sink{ip: @ip, port: port, stream_id: @stream_id})
 
     Pipeline.execute_actions(sender, spec: sender_spec)
 
@@ -150,6 +151,7 @@ defmodule Membrane.SRT.IntegrationTest do
     input_video = "test/fixtures/bbb.h264"
     # ref video contains AUD as H264 stream transported within MPEGTS needs to be AUD delimeted
     ref_video = "test/fixtures/bbb_with_aud.h264"
+    port = get_free_port()
 
     receiver =
       Pipeline.start_link_supervised!(
@@ -157,7 +159,7 @@ defmodule Membrane.SRT.IntegrationTest do
         custom_args: [
           output_audio: output_audio,
           output_video: output_video,
-          port: @port,
+          port: port,
           stream_id: @stream_id
         ]
       )
@@ -172,7 +174,7 @@ defmodule Membrane.SRT.IntegrationTest do
       |> via_in(:audio_input)
       |> child(:muxer, Membrane.MPEGTS.Muxer)
       |> child(:realtimer, Membrane.Realtimer)
-      |> child(:sink, %Membrane.SRT.Sink{ip: @ip, port: @port, stream_id: @stream_id}),
+      |> child(:sink, %Membrane.SRT.Sink{ip: @ip, port: port, stream_id: @stream_id}),
       child(:video_source, %Membrane.File.Source{location: input_video})
       |> child(:video_parser, %Membrane.H264.Parser{
         generate_best_effort_timestamps: %{framerate: {25, 1}, add_dts_offset: false}
@@ -190,5 +192,12 @@ defmodule Membrane.SRT.IntegrationTest do
 
     assert File.read!(input_audio) == File.read!(output_audio)
     assert File.read!(ref_video) == File.read!(output_video)
+  end
+
+ defp get_free_port() do
+    {:ok, s} = :gen_tcp.listen(0, active: false)
+    {:ok, port} = :inet.port(s)
+    :ok = :gen_tcp.close(s)
+    port
   end
 end
