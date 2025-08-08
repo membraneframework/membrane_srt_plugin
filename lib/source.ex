@@ -61,7 +61,7 @@ defmodule Membrane.SRT.Source do
                       spec =
                         child(:source, %Membrane.SRT.Source{server_awaiting_accept: server})
                         |> child(:sink, %Membrane.File.Sink{location: "output.ts"})
-                      Membrane.RCPipeline.execute_actions(pid, spec: spec)
+                      Membrane.RCPipeline.exec_actions(pid, spec: spec)
                   end
                 """
               ]
