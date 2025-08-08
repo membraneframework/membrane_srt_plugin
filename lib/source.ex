@@ -112,7 +112,7 @@ defmodule Membrane.SRT.Source do
 
   @impl true
   def handle_playing(_ctx, %{mode: :built_in} = state) do
-    {:ok, server} = Server.start(state.ip, state.port, state.password)
+    {:ok, server} = Server.start(state.ip, state.port, state.password || "")
     state = Map.put_new(state, :server, server)
     {[stream_format: {:output, %Membrane.RemoteStream{}}], state}
   end

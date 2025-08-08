@@ -38,7 +38,8 @@ defmodule Membrane.SRT.Mixfile do
   defp deps do
     [
       {:membrane_core, "~> 1.2.3"},
-      {:ex_libsrt, github: "membraneframework-labs/ex_libsrt"},
+      {:ex_libsrt,
+       github: "membraneframework-labs/ex_libsrt", branch: "blazpie/password_authentication"},
       {:membrane_mpeg_ts_plugin, github: "kim-company/membrane_mpeg_ts_plugin"},
       {:membrane_mpegts_plugin,
        github: "membraneframework/membrane_mpegts_plugin",
