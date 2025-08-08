@@ -142,7 +142,6 @@ defmodule Membrane.SRT.IntegrationTest do
   end
 
   @tag :tmp_dir
-  @tag :sometag
   test "if the MPEGTS Muxer muxes AAC and H264 streams into MPEGTS stream that can be sent via
     SRT received by the SRT Source",
        ctx do
