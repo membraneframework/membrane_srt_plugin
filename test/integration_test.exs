@@ -68,6 +68,7 @@ defmodule Membrane.SRT.IntegrationTest do
     sender = Pipeline.start_link_supervised!()
 
     {:ok, server} = ExLibSRT.Server.start("0.0.0.0", @port)
+    on_exit(fn -> ExLibSRT.Server.stop(server) end)
 
     sender_spec =
       child(:source, %Membrane.File.Source{location: input})
