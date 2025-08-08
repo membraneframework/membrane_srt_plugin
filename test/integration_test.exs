@@ -194,7 +194,7 @@ defmodule Membrane.SRT.IntegrationTest do
     assert File.read!(ref_video) == File.read!(output_video)
   end
 
- defp get_free_port() do
+  defp get_free_port() do
     {:ok, s} = :gen_tcp.listen(0, active: false)
     {:ok, port} = :inet.port(s)
     :ok = :gen_tcp.close(s)
