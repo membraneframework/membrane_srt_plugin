@@ -49,7 +49,9 @@ defmodule Membrane.SRT.Sink do
 
   @impl true
   def handle_setup(_ctx, state) do
-    {:ok, client} = ExLibSRT.Client.start(state.ip, state.port, state.stream_id, state.password)
+    {:ok, client} =
+      ExLibSRT.Client.start(state.ip, state.port, state.stream_id, state.password || "")
+
     state = Map.put(state, :client, client)
     {[setup: :incomplete], state}
   end
