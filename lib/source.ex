@@ -44,6 +44,9 @@ defmodule Membrane.SRT.Source do
                 Note that if you set this option, you must also set the same password
                 on the client side when connecting to this server.
                 Password needs to have between 10 and 79 characters.
+
+                Please note that it can only be used along `ip`, `port` and `stream_id`
+                options (password cannot be set when `server_awaiting_accept` is provided).
                 """
               ],
               server_awaiting_accept: [
@@ -62,7 +65,7 @@ defmodule Membrane.SRT.Source do
                 Exemplary usage scenario:
 
                   # Start the server listening on desired address and port
-                  {:ok, server} = ExLibSRT.Server.start(<ip>, <port>)
+                  {:ok, server} = ExLibSRT.Server.start(<ip>, <port>, <optional password>)
 
                   # Wait until a client with desired stream_id connects
                   receive do
@@ -85,18 +88,24 @@ defmodule Membrane.SRT.Source do
         %{ip: ip, port: port, stream_id: stream_id, server_awaiting_accept: nil} = opts
       )
       when not is_nil(ip) and not is_nil(port) and not is_nil(stream_id) do
-    state = Map.merge(%{mode: :built_in, password: ""}, opts)
+    state = Map.merge(%{mode: :built_in}, opts)
     {[], state}
   end
 
   @impl true
   def handle_init(
         _ctx,
-        %{ip: nil, port: nil, stream_id: nil, server_awaiting_accept: server_awaiting_accept} =
+        %{
+          ip: nil,
+          port: nil,
+          stream_id: nil,
+          password: nil,
+          server_awaiting_accept: server_awaiting_accept
+        } =
           opts
       )
       when not is_nil(server_awaiting_accept) do
-    state = Map.merge(%{mode: :external, password: ""}, opts)
+    state = Map.merge(%{mode: :external}, opts)
     {[], state}
   end
 
@@ -104,7 +113,7 @@ defmodule Membrane.SRT.Source do
   def handle_init(_ctx, opts) do
     raise """
       `#{inspect(__MODULE__)}` accepts the following disjoint sets of options:
-      * `port`, 'ip' and `stream_id`
+      * `port`, 'ip', `stream_id` and optionally `password`
       * 'server_awaiting_accept`
       while you provided: #{inspect(opts)}
     """
