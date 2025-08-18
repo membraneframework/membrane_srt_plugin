@@ -61,7 +61,7 @@ defmodule Membrane.SRT.Source do
                       spec =
                         child(:source, %Membrane.SRT.Source{server_awaiting_accept: server})
                         |> child(:sink, %Membrane.File.Sink{location: "output.ts"})
-                      Membrane.RCPipeline.execute_actions(pid, spec: spec)
+                      Membrane.RCPipeline.exec_actions(pid, spec: spec)
                   end
                 """
               ]
@@ -98,9 +98,14 @@ defmodule Membrane.SRT.Source do
   end
 
   @impl true
-  def handle_playing(_ctx, %{mode: :built_in} = state) do
+  def handle_playing(ctx, %{mode: :built_in} = state) do
     {:ok, server} = Server.start(state.ip, state.port)
     state = Map.put_new(state, :server, server)
+
+    Membrane.ResourceGuard.register(ctx.resource_guard, fn ->
+      Server.stop(server)
+    end)
+
     {[stream_format: {:output, %Membrane.RemoteStream{}}], state}
   end
 

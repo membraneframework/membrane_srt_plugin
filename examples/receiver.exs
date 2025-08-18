@@ -1,7 +1,10 @@
 Mix.install([
   {:membrane_srt_plugin, path: "./"},
   :membrane_mp4_plugin,
-  :membrane_file_plugin
+  :membrane_file_plugin,
+  :membrane_aac_plugin,
+  :membrane_h26x_plugin,
+  :membrane_mpeg_ts_plugin
 ])
 
 defmodule ReceivingPipeline do
