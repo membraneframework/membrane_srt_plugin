@@ -155,6 +155,8 @@ defmodule Membrane.SRT.IntegrationTest do
 
     port = get_free_port()
 
+    port = get_free_port()
+
     receiver =
       Pipeline.start_link_supervised!(
         module: DemuxingPipeline,
