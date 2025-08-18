@@ -28,16 +28,24 @@ defmodule Membrane.SRT.Sink do
                 description: """
                 ID of the stream being sent.
                 """
+              ],
+              password: [
+                default: nil,
+                spec: String.t() | nil,
+                description: """
+                Password used to authenticate the connection.
+                If set, the client will try to connect with server using this password.
+                If the server requires authentication and this option is not set, the connection will fail.
+                Note that the same password needs to be set by the server.
+                Password needs to have between 10 and 79 characters.
+                """
               ]
 
   @impl true
-  def handle_init(_ctx, opts) do
-    {[], %{ip: opts.ip, port: opts.port, stream_id: opts.stream_id}}
-  end
-
-  @impl true
   def handle_setup(_ctx, state) do
-    {:ok, client} = ExLibSRT.Client.start(state.ip, state.port, state.stream_id)
+    {:ok, client} =
+      ExLibSRT.Client.start(state.ip, state.port, state.stream_id, state.password || "")
+
     state = Map.put(state, :client, client)
     {[setup: :incomplete], state}
   end
