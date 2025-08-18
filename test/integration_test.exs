@@ -153,6 +153,8 @@ defmodule Membrane.SRT.IntegrationTest do
     ref_video = "test/fixtures/bbb_with_aud.h264"
     port = get_free_port()
 
+    port = get_free_port()
+
     receiver =
       Pipeline.start_link_supervised!(
         module: DemuxingPipeline,
