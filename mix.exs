@@ -40,9 +40,7 @@ defmodule Membrane.SRT.Mixfile do
       {:membrane_core, "~> 1.2.3"},
       {:ex_libsrt, github: "membraneframework-labs/ex_libsrt"},
       {:membrane_mpeg_ts_plugin, github: "kim-company/membrane_mpeg_ts_plugin"},
-      {:membrane_mpegts_plugin,
-       github: "membraneframework/membrane_mpegts_plugin",
-       branch: "varsill/improve_tests_and_docs"},
+      {:membrane_mpegts_plugin, "~> 0.5.0"},
       {:membrane_file_plugin, "~> 0.17.0", only: :test},
       {:membrane_realtimer_plugin, "~> 0.10.1", only: :test},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
@@ -81,7 +79,7 @@ defmodule Membrane.SRT.Mixfile do
       extras: ["README.md", "LICENSE"],
       formatters: ["html"],
       source_ref: "v#{@version}",
-      nest_modules_by_prefix: [Membrane.Template]
+      nest_modules_by_prefix: [Membrane.SRT]
     ]
   end
 end
