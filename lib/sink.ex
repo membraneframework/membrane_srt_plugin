@@ -42,12 +42,6 @@ defmodule Membrane.SRT.Sink do
               ]
 
   @impl true
-  def handle_init(_ctx, opts) do
-    state = Map.merge(%{password: ""}, opts)
-    {[], state}
-  end
-
-  @impl true
   def handle_setup(_ctx, state) do
     {:ok, client} =
       ExLibSRT.Client.start(state.ip, state.port, state.stream_id, state.password || "")

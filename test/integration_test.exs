@@ -58,6 +58,93 @@ defmodule Membrane.SRT.IntegrationTest do
   end
 
   @tag :tmp_dir
+  test "if the sink sends SRT stream that can be received by the source when password is set",
+       ctx do
+    port = get_free_port()
+    receiver = Pipeline.start_link_supervised!()
+    password = "some_password"
+
+    output = Path.join(ctx.tmp_dir, "out.ts")
+    input = "test/fixtures/bbb.ts"
+
+    receiver_spec =
+      child(:source, %Membrane.SRT.Source{
+        ip: "0.0.0.0",
+        port: port,
+        stream_id: @stream_id,
+        password: password
+      })
+      |> child(:sink, %Membrane.File.Sink{location: output})
+
+    Pipeline.execute_actions(receiver, spec: receiver_spec)
+    assert_child_playing(receiver, :source)
+    sender = Pipeline.start_link_supervised!()
+
+    sender_spec =
+      child(:source, %Membrane.File.Source{location: input})
+      |> child(:timestamps_generator, TimestampsGenerator)
+      |> child(:realtimer, Membrane.Realtimer)
+      |> child(:sink, %Membrane.SRT.Sink{
+        ip: @ip,
+        port: port,
+        stream_id: @stream_id,
+        password: password
+      })
+
+    Pipeline.execute_actions(sender, spec: sender_spec)
+
+    assert_end_of_stream(receiver, :sink, :input, 7000)
+    :ok = Membrane.Pipeline.terminate(sender)
+    :ok = Membrane.Pipeline.terminate(receiver)
+
+    assert File.read!(input) == File.read!(output)
+  end
+
+  @tag :tmp_dir
+  test "if the connection between the sink and the source fails when the passwords don't match",
+       ctx do
+    port = get_free_port()
+    receiver = Pipeline.start_link_supervised!()
+
+    output = Path.join(ctx.tmp_dir, "out.ts")
+    input = "test/fixtures/bbb.ts"
+
+    receiver_spec =
+      child(:source, %Membrane.SRT.Source{
+        ip: "0.0.0.0",
+        port: port,
+        stream_id: @stream_id,
+        password: "source_password"
+      })
+      |> child(:sink, %Membrane.File.Sink{location: output})
+
+    Pipeline.execute_actions(receiver, spec: receiver_spec)
+    assert_child_playing(receiver, :source)
+    sender = Pipeline.start_supervised!()
+    ref = Process.monitor(sender)
+
+    sender_spec =
+      child(:source, %Membrane.File.Source{location: input})
+      |> child(:timestamps_generator, TimestampsGenerator)
+      |> child(:realtimer, Membrane.Realtimer)
+      |> child(:sink, %Membrane.SRT.Sink{
+        ip: @ip,
+        port: port,
+        stream_id: @stream_id,
+        password: "sink_password"
+      })
+
+    :ok = Pipeline.execute_actions(sender, spec: sender_spec)
+
+    receive do
+      {:DOWN, ^ref, :process, ^sender, reason} ->
+        assert {:membrane_child_crash, :sink, _error} = reason
+    end
+
+    Membrane.Pipeline.terminate(receiver)
+  end
+
+  @tag :tmp_dir
   test "if the sink sends SRT stream that can be received by the source using external server",
        ctx do
     port = get_free_port()
