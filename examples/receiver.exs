@@ -3,8 +3,7 @@ Mix.install([
   :membrane_mp4_plugin,
   :membrane_file_plugin,
   :membrane_aac_plugin,
-  :membrane_h26x_plugin,
-  :membrane_mpeg_ts_plugin
+  :membrane_h26x_plugin
 ])
 
 defmodule ReceivingPipeline do
