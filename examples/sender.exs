@@ -3,8 +3,7 @@ Mix.install([
   :membrane_file_plugin,
   :membrane_realtimer_plugin,
   :membrane_h26x_plugin,
-  :membrane_aac_plugin,
-  :membrane_mpegts_plugin
+  :membrane_aac_plugin
 ])
 
 defmodule SendingPipeline do

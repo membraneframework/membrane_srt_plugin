@@ -38,8 +38,10 @@ defmodule Membrane.SRT.Mixfile do
   defp deps do
     [
       {:membrane_core, "~> 1.2.3"},
-      {:ex_libsrt, github: "membraneframework-labs/ex_libsrt"},
-      {:membrane_mpeg_ts_plugin, github: "kim-company/membrane_mpeg_ts_plugin"},
+      {:ex_libsrt, "~> 0.1.0"},
+      # MPEG-TS demuxer
+      {:membrane_mpeg_ts_plugin, "~> 1.3.3"},
+      # MPEG-TS muxer
       {:membrane_mpegts_plugin, "~> 0.5.0"},
       {:membrane_file_plugin, "~> 0.17.0", only: :test},
       {:membrane_realtimer_plugin, "~> 0.10.1", only: :test},
