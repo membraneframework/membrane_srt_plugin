@@ -38,7 +38,7 @@ defmodule Membrane.SRT.Mixfile do
   defp deps do
     [
       {:membrane_core, "~> 1.2.3"},
-      {:ex_libsrt, "~> 0.1.0"},
+      {:ex_libsrt, "~> 0.1.2"},
       # MPEG-TS demuxer
       {:membrane_mpeg_ts_plugin, "~> 1.3.3"},
       # MPEG-TS muxer
