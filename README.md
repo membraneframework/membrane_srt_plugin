@@ -14,7 +14,7 @@ The package can be installed by adding `membrane_srt_plugin` to your list of dep
 ```elixir
 def deps do
   [
-    {:membrane_srt_plugin, "~> 0.1.0"}
+    {:membrane_srt_plugin, "~> 0.1.1"}
   ]
 end
 ```
@@ -67,7 +67,7 @@ Alternatively, you can run one of the receiver scripts (`examples/receiver.exs` 
 `examples/receiver_with_external_server.exs`) and stream to `srt://127.0.0.1:1234?streamid=some_stream_id` with the use of OBS. 
 
 <img width="1437" alt="image" src="https://github.com/user-attachments/assets/d5841a09-4edc-4e0a-b25a-a33d91d8f271" />
- 
+
 ## Copyright and License
 
 Copyright 2020, [Software Mansion](https://swmansion.com/?utm_source=git&utm_medium=readme&utm_campaign=membrane_template_plugin)

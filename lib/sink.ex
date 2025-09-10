@@ -78,6 +78,10 @@ defmodule Membrane.SRT.Sink do
     send_data(rest, client)
   end
 
+  defp send_data(<<>>, _client) do
+    :ok
+  end
+
   defp send_data(payload, client) do
     :ok = ExLibSRT.Client.send_data(payload, client)
   end
