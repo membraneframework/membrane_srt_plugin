@@ -66,6 +66,8 @@ to see how the SRT connection is estabilished.
 Alternatively, you can run one of the receiver scripts (`examples/receiver.exs` or
 `examples/receiver_with_external_server.exs`) and stream to `srt://127.0.0.1:1234?streamid=some_stream_id` with the use of OBS. 
 
+### OBS configuration
+
 <img width="1437" alt="image" src="https://github.com/user-attachments/assets/d5841a09-4edc-4e0a-b25a-a33d91d8f271" />
 
 ## Copyright and License
