@@ -28,7 +28,6 @@ with the assumed stream ID.
 To see how it works you can run the following script:
 ```
 elixir examples/receiver.exs
-
 ```
 The receiver will be waiting for the SRT connection on port 1234 for all the available network interfaces.
 When the SRT client with assumed stream ID (`some_stream_id`) connects, the content of stream sent via SRT
