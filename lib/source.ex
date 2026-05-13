@@ -60,7 +60,7 @@ defmodule Membrane.SRT.Source do
                 cannot be set.
                 If you want to use `#{inspect(__MODULE__)}` with that option, remember to spawn
                 the element right after receiving `{:srt_server_conn, conn_id, stream_id}`
-                message from the server - this way you will have a guarantee that the source will
+                message from the server, so that the source can
                 bind to the desired connection within the 1-second timeout.
 
                 Exemplary usage scenario:
