@@ -16,13 +16,13 @@ defmodule PipelinesSpawner do
     Starting #{inspect(__MODULE__)} listening on: #{@address}:#{inspect(@port)}
     """)
 
-    {:ok, server} = ExLibSRT.Server.start(@address, @port)
+    {:ok, server} = ExLibSRT.Server.start(@address, @port, accept_mode: :accept_all)
     wait_for_connections(server)
   end
 
   defp wait_for_connections(server) do
     receive do
-      {:srt_server_connect_request, _address, stream_id} ->
+      {:srt_server_conn, conn_id, stream_id} ->
         output_path = "output_#{stream_id}.ts"
 
         Logger.info("""
@@ -33,7 +33,7 @@ defmodule PipelinesSpawner do
         pid = RCPipeline.start_link!()
 
         spec =
-          child(:source, %Membrane.SRT.Source{server_awaiting_accept: server})
+          child(:source, %Membrane.SRT.Source{server: server, conn_id: conn_id})
           |> child(:sink, %Membrane.File.Sink{location: output_path})
 
         RCPipeline.exec_actions(pid, spec: spec)

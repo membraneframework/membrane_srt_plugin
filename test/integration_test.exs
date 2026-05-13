@@ -155,7 +155,9 @@ defmodule Membrane.SRT.IntegrationTest do
 
     sender = Pipeline.start_link_supervised!()
 
-    {:ok, server} = ExLibSRT.Server.start("0.0.0.0", port)
+    {:ok, server} =
+      ExLibSRT.Server.start("0.0.0.0", port, accept_mode: {:whitelist, [@stream_id]})
+
     on_exit(fn -> ExLibSRT.Server.stop(server) end)
 
     sender_spec =
@@ -167,9 +169,9 @@ defmodule Membrane.SRT.IntegrationTest do
     Pipeline.execute_actions(sender, spec: sender_spec)
 
     receive do
-      {:srt_server_connect_request, _address, _stream_id} ->
+      {:srt_server_conn, conn_id, _stream_id} ->
         receiver_spec =
-          child(:source, %Membrane.SRT.Source{server_awaiting_accept: server})
+          child(:source, %Membrane.SRT.Source{server: server, conn_id: conn_id})
           |> child(:sink, %Membrane.File.Sink{location: output})
 
         Pipeline.execute_actions(receiver, spec: receiver_spec)

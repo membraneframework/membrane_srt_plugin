@@ -46,46 +46,55 @@ defmodule Membrane.SRT.Source do
                 Password needs to have between 10 and 79 characters.
 
                 Please note that it can only be used along `ip`, `port` and `stream_id`
-                options (password cannot be set when `server_awaiting_accept` is provided).
+                options (password cannot be set when `server` and `conn_id` are provided).
                 """
               ],
-              server_awaiting_accept: [
+              server: [
                 default: nil,
                 spec: ExLibSRT.Server.t() | nil,
                 description: """
-                Reference to `ExLibSRT.Server` which is waiting for a connection accepting.
+                Reference to an already-running `ExLibSRT.Server`.
+                Must be provided together with `conn_id`.
 
                 When using this option, the other options (`ip`, `port`, `stream_id` and `password`)
                 cannot be set.
                 If you want to use `#{inspect(__MODULE__)}` with that option, remember to spawn
-                the element right after receiving `{:srt_server_connect_request, address, stream_id}`
+                the element right after receiving `{:srt_server_conn, conn_id, stream_id}`
                 message from the server - this way you will have a guarantee that the source will
-                handle the desired client.
+                bind to the desired connection within the 1-second timeout.
 
                 Exemplary usage scenario:
 
                   # Start the server listening on desired address and port
-                  {:ok, server} = ExLibSRT.Server.start(<ip>, <port>, <optional password>)
+                  {:ok, server} = ExLibSRT.Server.start(<ip>, <port>, accept_mode: :accept_all)
 
                   # Wait until a client with desired stream_id connects
                   receive do
-                    {:srt_server_connect_request, _address, _stream_id} ->
+                    {:srt_server_conn, conn_id, _stream_id} ->
                       pid = Membrane.RCPipeline.start_link!()
 
                       # Spawn the `#{inspect(__MODULE__)}` element and pass the server
-                      # instance as an argument
+                      # and connection ID as arguments
                       spec =
-                        child(:source, %Membrane.SRT.Source{server_awaiting_accept: server})
+                        child(:source, %Membrane.SRT.Source{server: server, conn_id: conn_id})
                         |> child(:sink, %Membrane.File.Sink{location: "output.ts"})
                       Membrane.RCPipeline.exec_actions(pid, spec: spec)
                   end
+                """
+              ],
+              conn_id: [
+                default: nil,
+                spec: ExLibSRT.Server.connection_id() | nil,
+                description: """
+                Connection ID received via `{:srt_server_conn, conn_id, stream_id}`.
+                Must be provided together with `server`.
                 """
               ]
 
   @impl true
   def handle_init(
         _ctx,
-        %{ip: ip, port: port, stream_id: stream_id, server_awaiting_accept: nil} = opts
+        %{ip: ip, port: port, stream_id: stream_id, server: nil, conn_id: nil} = opts
       )
       when not is_nil(ip) and not is_nil(port) and not is_nil(stream_id) do
     state = Map.merge(%{mode: :built_in}, opts)
@@ -100,11 +109,12 @@ defmodule Membrane.SRT.Source do
           port: nil,
           stream_id: nil,
           password: nil,
-          server_awaiting_accept: server_awaiting_accept
+          server: server,
+          conn_id: conn_id
         } =
           opts
       )
-      when not is_nil(server_awaiting_accept) do
+      when not is_nil(server) and not is_nil(conn_id) do
     state = Map.merge(%{mode: :external}, opts)
     {[], state}
   end
@@ -114,14 +124,16 @@ defmodule Membrane.SRT.Source do
     raise """
       `#{inspect(__MODULE__)}` accepts the following disjoint sets of options:
       * `port`, 'ip', `stream_id` and optionally `password`
-      * 'server_awaiting_accept`
+      * `server` and `conn_id`
       while you provided: #{inspect(opts)}
     """
   end
 
   @impl true
   def handle_playing(ctx, %{mode: :built_in} = state) do
-    {:ok, server} = Server.start(state.ip, state.port, state.password || "")
+    password_opt = if state.password, do: [password: state.password], else: []
+    opts = [accept_mode: {:whitelist, [state.stream_id]}] ++ password_opt
+    {:ok, server} = Server.start(state.ip, state.port, opts)
     state = Map.put_new(state, :server, server)
 
     Membrane.ResourceGuard.register(ctx.resource_guard, fn ->
@@ -133,30 +145,13 @@ defmodule Membrane.SRT.Source do
 
   @impl true
   def handle_playing(_ctx, %{mode: :external} = state) do
-    :ok = Server.accept_awaiting_connect_request(state.server_awaiting_accept)
+    :ok = Server.bind_with_process(state.server, state.conn_id, self())
     {[stream_format: {:output, %Membrane.RemoteStream{}}], state}
   end
 
   @impl true
-  def handle_info(
-        {:srt_server_connect_request, _address, stream_id},
-        _ctx,
-        %{mode: :built_in} = state
-      ) do
-    if stream_id == state.stream_id do
-      :ok = Server.accept_awaiting_connect_request(state.server)
-    else
-      Membrane.Logger.warning(
-        "Received connection request for stream with ID: #{inspect(stream_id)} which is not accepted
-        by this server. Server expects stream with ID: #{inspect(state.stream_id)}"
-      )
-    end
-
-    {[], state}
-  end
-
-  @impl true
-  def handle_info({:srt_server_conn, _id, _stream_id}, _ctx, state) do
+  def handle_info({:srt_server_conn, conn_id, _stream_id}, _ctx, %{mode: :built_in} = state) do
+    :ok = Server.bind_with_process(state.server, conn_id)
     {[], state}
   end
 
