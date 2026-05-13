@@ -21,7 +21,7 @@ defmodule Membrane.SRT.IntegrationTest do
 
     @impl true
     def handle_buffer(:input, buffer, _ctx, state) do
-      buffer = %Membrane.Buffer{buffer | pts: Membrane.Time.milliseconds(state.i)}
+      buffer = %{buffer | pts: Membrane.Time.milliseconds(state.i)}
       {[buffer: {:output, buffer}], %{state | i: state.i + 1}}
     end
   end

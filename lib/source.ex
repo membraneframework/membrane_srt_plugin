@@ -134,7 +134,7 @@ defmodule Membrane.SRT.Source do
     password_opt = if state.password, do: [password: state.password], else: []
     opts = [accept_mode: {:whitelist, [state.stream_id]}] ++ password_opt
     {:ok, server} = Server.start(state.ip, state.port, opts)
-    state = Map.put_new(state, :server, server)
+    state = Map.put(state, :server, server)
 
     Membrane.ResourceGuard.register(ctx.resource_guard, fn ->
       Server.stop(server)
