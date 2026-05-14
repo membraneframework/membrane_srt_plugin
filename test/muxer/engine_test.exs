@@ -1,8 +1,8 @@
 defmodule Membrane.SRT.Muxer.EngineTest do
   @moduledoc false
   use ExUnit.Case, async: true
-  alias Membrane.MPEGTS.Muxer.Engine
   alias Membrane.MPEGTS.Muxer.{AACParser, H264Parser}
+  alias Membrane.MPEGTS.Muxer.Engine
 
   test "if the MPEG TS muxes H264 stream" do
     input_path = "test/fixtures/bbb.h264"
