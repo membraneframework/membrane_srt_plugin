@@ -14,7 +14,7 @@ The package can be installed by adding `membrane_srt_plugin` to your list of dep
 ```elixir
 def deps do
   [
-    {:membrane_srt_plugin, "~> 0.2.0"}
+    {:membrane_srt_plugin, "~> 0.2.1"}
   ]
 end
 ```
